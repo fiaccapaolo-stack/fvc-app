@@ -1,0 +1,14 @@
+{
+  "name": "signalpoint-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Server SignalPoint: serve la PWA e invia notifiche push automatiche quando aggiungi un'offerta.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "web-push": "^3.6.7"
+  }
+}

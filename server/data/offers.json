@@ -1,0 +1,23 @@
+[
+  {
+    "id": "cover-15",
+    "pct": "-15%",
+    "title": "Cover e vetri protettivi",
+    "desc": "Su tutta la selezione accessori, fino a fine mese.",
+    "heat": 3
+  },
+  {
+    "id": "permuta-80",
+    "pct": "−80€",
+    "title": "Permuta il tuo usato",
+    "desc": "Valutazione gratuita, sconto immediato sul nuovo acquisto.",
+    "heat": 2
+  },
+  {
+    "id": "pellicole-2x1",
+    "pct": "2x1",
+    "title": "Pellicole in vetro temperato",
+    "desc": "Acquistane una, la seconda è in regalo.",
+    "heat": 1
+  }
+]

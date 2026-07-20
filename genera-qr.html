@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Genera QR — Fvc Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10151C; --surface:#1A222C; --border:#2B3644;
+    --text:#EDF1F5; --text-dim:#8B98A8; --gold:#D4AF37; --cyan:#4FD8E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:'Inter', system-ui, sans-serif; padding:32px 20px 60px;
+  }
+  .wrap{max-width:420px; margin:0 auto;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:22px; margin:0 0 6px;}
+  p.lead{color:var(--text-dim); font-size:13.5px; margin:0 0 24px; line-height:1.5;}
+  label{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:6px;}
+  input{
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-size:14px; margin-bottom:16px;
+  }
+  input:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button{
+    width:100%; padding:12px; border-radius:10px; border:none;
+    background:var(--gold); color:#141821; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  #result{margin-top:28px; text-align:center; display:none;}
+  #result.show{display:block;}
+  .flyer{
+    background:#fff; border-radius:16px; padding:28px 20px 22px;
+    display:inline-block; margin-top:8px;
+  }
+  .flyer img{display:block; margin:0 auto 14px;}
+  .flyer .brand{font-family:'Space Grotesk', sans-serif; color:#10151C; font-weight:700; font-size:17px; margin:0 0 4px;}
+  .flyer .cta{color:#3a4552; font-size:12.5px; margin:0;}
+  a.download{
+    display:inline-block; margin-top:16px; font-size:12.5px; color:var(--cyan); text-decoration:none;
+  }
+  .note{font-size:12px; color:var(--text-dim); margin-top:20px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Genera il QR per l'app</h1>
+  <p class="lead">Inserisci l'indirizzo online della tua app (quello che i clienti apriranno) e ottieni un QR pronto da stampare. Il codice è generato da un servizio gratuito (api.qrserver.com), nessuna registrazione richiesta.</p>
+
+  <label for="url">Indirizzo della app</label>
+  <input type="url" id="url" placeholder="https://tuo-dominio.it" value="https://tuo-dominio.it">
+  <button id="generate">Genera QR</button>
+
+  <div id="result">
+    <div class="flyer" id="flyer">
+      <img id="qr-img" width="220" height="220" alt="QR code">
+      <p class="brand">Fvc Project Srl</p>
+      <p class="cta">Inquadra per scaricare la nostra app</p>
+    </div>
+    <br>
+    <a class="download" id="download-link" download="qr-fvc-project.png">Scarica solo il QR (PNG)</a>
+  </div>
+
+  <p class="note">Suggerimento: stampa il riquadro bianco così com'è e mettilo alla cassa o in vetrina — funziona anche come volantino. Se cambi dominio in futuro, rigenera il QR da qui.</p>
+</div>
+
+<script>
+  const input = document.getElementById('url');
+  const result = document.getElementById('result');
+  const img = document.getElementById('qr-img');
+  const downloadLink = document.getElementById('download-link');
+
+  function generate(){
+    const url = input.value.trim();
+    if (!url) return;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=440x440&margin=10&data=${encodeURIComponent(url)}`;
+    img.src = qrSrc;
+    downloadLink.href = qrSrc;
+    result.classList.add('show');
+  }
+  document.getElementById('generate').addEventListener('click', generate);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+</script>
+</body>
+</html>
