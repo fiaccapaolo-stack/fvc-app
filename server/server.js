@@ -95,6 +95,63 @@ async function seedOffersIfEmpty() {
   if (seed.length) console.log(`Importate ${seed.length} offerte di esempio su Upstash.`);
 }
 
+// ---- Configurazione generale del negozio: nome, indirizzo, contatti,
+// orari, catalogo prodotti. Un solo oggetto JSON salvato su Redis. ----
+const DEFAULT_CONFIG = {
+  shopName: "Fvc Project Srl",
+  address: "Viale Indipendenza 57/a, 63100 Ascoli Piceno",
+  phone: "0736 46354",
+  phoneE164: "+39073646354",
+  whatsapp: "333 123 456",
+  whatsappLink: "https://wa.me/39333123456",
+  hours: [
+    { label: "Lunedì", value: "15:30 – 19:30" },
+    { label: "Martedì – Sabato", value: "9:00 – 13:00, 15:30 – 19:30" },
+    { label: "Domenica", value: "Chiuso" },
+  ],
+  products: {
+    smartphone: [
+      { name: "iPhone 15", spec: "128GB · Nero", price: "799€", stock: 4 },
+      { name: "Galaxy S24", spec: "256GB · Grigio", price: "729€", stock: 3 },
+      { name: "Redmi Note 13", spec: "128GB · Blu", price: "229€", stock: 4 },
+      { name: "Pixel 8a", spec: "128GB · Verde", price: "459€", stock: 2 },
+    ],
+    accessori: [
+      { name: "Cover silicone", spec: "Universale", price: "14,90€", stock: 4 },
+      { name: "Vetro temperato", spec: "9H · Anti-impronta", price: "9,90€", stock: 4 },
+      { name: "Caricatore 20W", spec: "USB-C · Ricarica rapida", price: "19,90€", stock: 3 },
+      { name: "Auricolari BT", spec: "Bluetooth 5.3", price: "34,90€", stock: 2 },
+    ],
+    ricambi: [
+      { name: "Batteria iPhone", spec: "Varie generazioni", price: "da 39€", stock: 3 },
+      { name: "Display Samsung", spec: "Varie generazioni", price: "da 79€", stock: 2 },
+      { name: "Vetro posteriore", spec: "Varie generazioni", price: "da 29€", stock: 3 },
+      { name: "Connettore ricarica", spec: "Universale", price: "da 19€", stock: 4 },
+    ],
+  },
+};
+
+async function getConfig() {
+  const stored = await redis.get("config");
+  if (!stored) return null;
+  return typeof stored === "string" ? JSON.parse(stored) : stored;
+}
+async function saveConfig(config) {
+  await redis.set("config", JSON.stringify(config));
+}
+async function seedConfigIfEmpty() {
+  const existing = await getConfig();
+  if (existing) return;
+  await saveConfig(DEFAULT_CONFIG);
+  console.log("Configurazione di partenza (nome, indirizzo, catalogo) salvata su Upstash.");
+}
+
+function normalizePhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("39") ? `+${digits}` : `+39${digits}`;
+}
+
 async function sendToAll(payload) {
   const subs = await getSubscriptions();
   for (const sub of subs) {
@@ -127,6 +184,7 @@ async function main() {
     vapidKeys.privateKey
   );
   await seedOffersIfEmpty();
+  await seedConfigIfEmpty();
 
   const app = express();
   app.use(express.json());
@@ -139,6 +197,10 @@ async function main() {
 
   app.get("/api/offers", async (req, res) => {
     res.json(await getOffers());
+  });
+
+  app.get("/api/config", async (req, res) => {
+    res.json((await getConfig()) || DEFAULT_CONFIG);
   });
 
   app.post("/api/subscribe", async (req, res) => {
@@ -163,6 +225,28 @@ async function main() {
 
   app.get("/api/admin/offers", requireAdmin, async (req, res) => {
     res.json(await getOffers());
+  });
+
+  app.get("/api/admin/config", requireAdmin, async (req, res) => {
+    res.json((await getConfig()) || DEFAULT_CONFIG);
+  });
+
+  // Aggiorna solo i campi inviati (nome/indirizzo/telefono/orari/catalogo),
+  // lasciando invariato il resto della configurazione.
+  app.put("/api/admin/config", requireAdmin, async (req, res) => {
+    const current = (await getConfig()) || DEFAULT_CONFIG;
+    const body = req.body || {};
+    const updated = { ...current, ...body };
+    if (body.phone !== undefined) {
+      updated.phone = body.phone;
+      updated.phoneE164 = normalizePhone(body.phone);
+    }
+    if (body.whatsapp !== undefined) {
+      updated.whatsapp = body.whatsapp;
+      updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
+    }
+    await saveConfig(updated);
+    res.json(updated);
   });
 
   app.post("/api/admin/offers", requireAdmin, async (req, res) => {
