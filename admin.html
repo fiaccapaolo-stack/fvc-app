@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestione offerte — Fvc Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
+    --text:#EDF1F5; --text-dim:#8B98A8; --gold:#D4AF37; --gold-soft:#E8CE7A; --cyan:#4FD8E8;
+    --danger:#E5675F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:'Inter', system-ui, sans-serif; padding:28px 18px 60px;
+  }
+  .wrap{max-width:520px; margin:0 auto;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:21px; margin:0 0 4px;}
+  p.lead{color:var(--text-dim); font-size:13px; margin:0 0 22px;}
+  label{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:6px;}
+  input, textarea, select{
+    width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-size:14px; margin-bottom:14px;
+    font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:60px;}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button{
+    padding:11px 16px; border-radius:10px; border:none;
+    background:var(--gold); color:#141821; font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  button.secondary{background:var(--surface-alt); color:var(--text); border:1px solid var(--border);}
+  button.danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
+  button:disabled{opacity:.5; cursor:default;}
+
+  #login{max-width:340px; margin:80px auto 0;}
+  #login button{width:100%;}
+  #login .error{color:var(--danger); font-size:12.5px; margin:-6px 0 12px; display:none;}
+
+  #panel{display:none;}
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:12px;
+  }
+  .card .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .card h3{margin:0 0 4px; font-size:15px; font-weight:600;}
+  .card .pct{font-family:'Space Grotesk', sans-serif; color:var(--gold); font-weight:700; font-size:16px;}
+  .card p{margin:0; font-size:12.5px; color:var(--text-dim);}
+  .card .actions{display:flex; gap:8px; margin-top:12px;}
+  .card .actions button{flex:1; font-size:12.5px; padding:8px;}
+
+  .section-title{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold);
+    text-transform:uppercase; letter-spacing:.08em; margin:28px 0 12px;
+  }
+  #form-card{display:none;}
+  .form-actions{display:flex; gap:10px;}
+  .form-actions button{flex:1;}
+  .heat-row{display:flex; gap:8px; margin-bottom:14px;}
+  .heat-opt{
+    flex:1; text-align:center; padding:9px 0; border-radius:8px; border:1px solid var(--border);
+    cursor:pointer; font-size:13px; color:var(--text-dim);
+  }
+  .heat-opt.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
+  .toast{
+    position:fixed; left:18px; right:18px; bottom:18px; background:var(--surface);
+    border:1px solid var(--cyan); border-radius:10px; padding:12px 14px; font-size:13px;
+    display:none; max-width:484px; margin:0 auto;
+  }
+  .toast.show{display:block;}
+  .toast.error{border-color:var(--danger); color:var(--danger);}
+</style>
+</head>
+<body>
+
+<div id="login" class="wrap">
+  <h1>Gestione offerte</h1>
+  <p class="lead">Fvc Project — accesso riservato</p>
+  <label for="pwd">Password</label>
+  <input type="password" id="pwd" placeholder="••••••••">
+  <p class="error" id="login-error">Password non corretta.</p>
+  <button id="login-btn">Accedi</button>
+</div>
+
+<div id="panel" class="wrap">
+  <h1>Gestione offerte</h1>
+  <p class="lead">Aggiungi, modifica o elimina le offerte mostrate nella app.</p>
+
+  <button id="new-offer-btn">+ Nuova offerta</button>
+
+  <div id="form-card" class="card">
+    <input type="hidden" id="f-editing-id">
+    <label for="f-id">Id univoco (solo per offerte nuove, es. black-friday-26)</label>
+    <input type="text" id="f-id" placeholder="black-friday-26">
+    <label for="f-pct">Sconto mostrato (es. -20%, 2x1, −50€)</label>
+    <input type="text" id="f-pct" placeholder="-20%">
+    <label for="f-title">Titolo</label>
+    <input type="text" id="f-title" placeholder="Sconto su tutti gli accessori">
+    <label for="f-desc">Descrizione breve</label>
+    <textarea id="f-desc" placeholder="Valido fino a fine mese, solo in negozio."></textarea>
+    <label>Livello "quanto è calda" (mostrato con le barre)</label>
+    <div class="heat-row" id="heat-row">
+      <div class="heat-opt" data-v="1">1</div>
+      <div class="heat-opt" data-v="2">2</div>
+      <div class="heat-opt" data-v="3">3</div>
+      <div class="heat-opt" data-v="4">4</div>
+    </div>
+    <div class="form-actions">
+      <button class="secondary" id="cancel-btn">Annulla</button>
+      <button id="save-btn">Salva</button>
+    </div>
+  </div>
+
+  <p class="section-title">Offerte attive</p>
+  <div id="offers-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
+  let heatValue = 2;
+
+  function toast(msg, isError){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  async function apiFetch(url, opts = {}){
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD, ...(opts.headers||{}) }
+    });
+    if (res.status === 401) throw new Error('unauthorized');
+    if (!res.ok) { const b = await res.json().catch(()=>({})); throw new Error(b.error || 'Errore'); }
+    return res.status === 204 ? null : res.json();
+  }
+
+  function showPanel(){
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    loadOffers();
+  }
+
+  async function tryLogin(pwd){
+    ADMIN_PASSWORD = pwd;
+    try {
+      await apiFetch('/api/admin/check', { method: 'POST' });
+      sessionStorage.setItem('fvc_admin_pwd', pwd);
+      showPanel();
+    } catch {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', () => {
+    tryLogin(document.getElementById('pwd').value);
+  });
+  document.getElementById('pwd').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryLogin(e.target.value);
+  });
+
+  // Se la password e' gia' salvata in questa scheda del browser, entra subito
+  if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
+
+  function heatDots(n){
+    let out = '';
+    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
+    return out;
+  }
+
+  async function loadOffers(){
+    try {
+      const offers = await apiFetch('/api/admin/offers');
+      const list = document.getElementById('offers-list');
+      if (offers.length === 0){
+        list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna offerta al momento.</p>';
+        return;
+      }
+      list.innerHTML = offers.map(o => `
+        <div class="card">
+          <div class="row">
+            <div>
+              <h3>${o.title}</h3>
+              <p>${o.desc || ''}</p>
+            </div>
+            <div class="pct">${o.pct}</div>
+          </div>
+          <div style="margin-top:8px;">${heatDots(o.heat)}</div>
+          <div class="actions">
+            <button class="secondary" onclick='editOffer(${JSON.stringify(o).replace(/'/g,"&apos;")})'>Modifica</button>
+            <button class="danger" onclick="removeOffer('${o.id}')">Elimina</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      toast('Errore nel caricamento: ' + err.message, true);
+    }
+  }
+
+  function setHeat(v){
+    heatValue = v;
+    document.querySelectorAll('.heat-opt').forEach(el => {
+      el.classList.toggle('active', Number(el.dataset.v) === v);
+    });
+  }
+  document.getElementById('heat-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setHeat(Number(opt.dataset.v));
+  });
+
+  function openForm(offer){
+    document.getElementById('form-card').style.display = 'block';
+    document.getElementById('f-editing-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').disabled = !!offer;
+    document.getElementById('f-pct').value = offer ? offer.pct : '';
+    document.getElementById('f-title').value = offer ? offer.title : '';
+    document.getElementById('f-desc').value = offer ? (offer.desc || '') : '';
+    setHeat(offer ? offer.heat : 2);
+    document.getElementById('f-id').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  function closeForm(){
+    document.getElementById('form-card').style.display = 'none';
+  }
+
+  document.getElementById('new-offer-btn').addEventListener('click', () => openForm(null));
+  document.getElementById('cancel-btn').addEventListener('click', closeForm);
+
+  window.editOffer = function(offer){ openForm(offer); };
+
+  window.removeOffer = async function(id){
+    if (!confirm('Eliminare questa offerta?')) return;
+    try {
+      await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method: 'DELETE' });
+      toast('Offerta eliminata.');
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  };
+
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    const editingId = document.getElementById('f-editing-id').value;
+    const payload = {
+      id: document.getElementById('f-id').value.trim(),
+      pct: document.getElementById('f-pct').value.trim(),
+      title: document.getElementById('f-title').value.trim(),
+      desc: document.getElementById('f-desc').value.trim(),
+      heat: heatValue
+    };
+    if (!payload.id || !payload.pct || !payload.title){
+      toast('Compila almeno id, sconto e titolo.', true);
+      return;
+    }
+    try {
+      if (editingId){
+        await apiFetch('/api/admin/offers/' + encodeURIComponent(editingId), {
+          method: 'PUT', body: JSON.stringify(payload)
+        });
+        toast('Offerta aggiornata.');
+      } else {
+        await apiFetch('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Offerta creata: notifica inviata a tutti gli iscritti.');
+      }
+      closeForm();
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+</script>
+</body>
+</html>
