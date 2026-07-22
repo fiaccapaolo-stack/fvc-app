@@ -1,4 +1,4 @@
-const CACHE_NAME = "signalpoint-v1";
+const CACHE_NAME = "signalpoint-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -28,19 +28,30 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Strategia: network-first per index.html (contenuti sempre freschi quando online),
-// cache-first per il resto (icone, manifest) cosi' l'app si apre anche offline.
+// Strategia:
+// - index.html e le chiamate /api/*: sempre network-first, cosi' i contenuti
+//   modificati dal pannello admin (nome, indirizzo, catalogo, offerte...)
+//   appaiono subito, senza aspettare la cache. Si usa la cache solo se il
+//   telefono e' offline.
+// - il resto (icone, manifest): cache-first, cosi' l'app si apre veloce
+//   anche offline.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  if (request.mode === "navigate") {
+  const url = new URL(request.url);
+  const isNavigate = request.mode === "navigate";
+  const isApi = url.pathname.startsWith("/api/");
+
+  if (isNavigate || isApi) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (isNavigate) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => (isNavigate ? caches.match("./index.html") : caches.match(request)))
     );
     return;
   }
