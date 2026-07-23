@@ -232,10 +232,11 @@ async function main() {
   });
 
   // Aggiorna solo i campi inviati (nome/indirizzo/telefono/orari/catalogo),
-  // lasciando invariato il resto della configurazione.
+  // lasciando invariato il resto della configurazione. Se il pannello manda
+  // anche un campo "notify" ({title, body}), avvisa subito tutti gli iscritti.
   app.put("/api/admin/config", requireAdmin, async (req, res) => {
     const current = (await getConfig()) || DEFAULT_CONFIG;
-    const body = req.body || {};
+    const { notify, ...body } = req.body || {};
     const updated = { ...current, ...body };
     if (body.phone !== undefined) {
       updated.phone = body.phone;
@@ -246,6 +247,10 @@ async function main() {
       updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
     }
     await saveConfig(updated);
+    if (notify && notify.body) {
+      console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
+      await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
+    }
     res.json(updated);
   });
 
@@ -260,8 +265,9 @@ async function main() {
     }
     const offer = { id, pct, title, desc: desc || "", heat: Number(heat) || 1, createdAt: Date.now() };
     await saveOffer(offer);
+    const cfg = (await getConfig()) || DEFAULT_CONFIG;
     console.log("Nuova offerta creata dal pannello, invio notifica:", offer.title);
-    await sendToAll({ title: `Fvc Project · ${offer.pct}`, body: offer.title });
+    await sendToAll({ title: `${cfg.shopName} · ${offer.pct}`, body: offer.title });
     res.status(201).json(offer);
   });
 
@@ -278,12 +284,33 @@ async function main() {
       desc: desc ?? current.desc,
       heat: heat !== undefined ? Number(heat) : current.heat,
     };
-    await saveOffer(updated); // modificare un'offerta esistente non genera notifica
+    await saveOffer(updated);
+    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    console.log("Offerta modificata dal pannello, invio notifica:", updated.title);
+    await sendToAll({ title: `${cfg.shopName} · Offerta aggiornata`, body: `${updated.pct} — ${updated.title}` });
     res.json(updated);
   });
 
   app.delete("/api/admin/offers/:id", requireAdmin, async (req, res) => {
+    const existing = await getOffers();
+    const toRemove = existing.find((o) => o.id === req.params.id);
     await deleteOffer(req.params.id);
+    if (toRemove) {
+      const cfg = (await getConfig()) || DEFAULT_CONFIG;
+      console.log("Offerta rimossa dal pannello, invio notifica:", toRemove.title);
+      await sendToAll({ title: `${cfg.shopName} · Offerta terminata`, body: toRemove.title });
+    }
+    res.json({ ok: true });
+  });
+
+  // Invio manuale extra: da usare per annunci non legati a una singola
+  // modifica (es. auguri, eventi, avvisi generali).
+  app.post("/api/admin/notify", requireAdmin, async (req, res) => {
+    const { title, body } = req.body || {};
+    if (!body) return res.status(400).json({ error: "Scrivi almeno il testo del messaggio" });
+    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    console.log("Notifica manuale inviata dal pannello:", body);
+    await sendToAll({ title: title || `${cfg.shopName} · Novità`, body });
     res.json({ ok: true });
   });
 

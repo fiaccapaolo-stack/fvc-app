@@ -680,8 +680,37 @@
     if (Notification.permission === 'denied'){ setNotifyState('blocked'); return; }
     if (Notification.permission === 'granted'){
       const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
-      if (existing) { setNotifyState('active'); return; }
+      let existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        // Controlliamo che la chiave di sicurezza con cui e' stata creata
+        // l'iscrizione corrisponda ancora a quella attuale del server. Se il
+        // server ha generato nuove chiavi nel frattempo, l'iscrizione vecchia
+        // non funzionerebbe piu': la rifacciamo da zero, in automatico.
+        try {
+          const { publicKey } = await fetch('/api/vapid-public-key').then(r => r.json());
+          const currentKey = urlBase64ToUint8Array(publicKey);
+          const existingKey = existing.options && existing.options.applicationServerKey
+            ? new Uint8Array(existing.options.applicationServerKey) : null;
+          const sameKey = existingKey && existingKey.length === currentKey.length &&
+            existingKey.every((v, i) => v === currentKey[i]);
+          if (!sameKey) {
+            await existing.unsubscribe();
+            existing = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: currentKey });
+          }
+        } catch (e) { /* se il controllo fallisce, si prova comunque a registrare quella esistente */ }
+
+        // Ri-registriamo comunque sul server ad ogni apertura, in silenzio,
+        // cosi' un eventuale disallineamento lato server si corregge da solo.
+        try {
+          await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existing)
+          });
+        } catch (e) { /* nessun problema, si ritentera' alla prossima apertura */ }
+        setNotifyState('active');
+        return;
+      }
     }
     setNotifyState('idle');
   }

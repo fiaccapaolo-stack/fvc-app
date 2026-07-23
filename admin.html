@@ -108,6 +108,15 @@
   <h1>Pannello di gestione</h1>
   <p class="lead">Fvc Project — modifica i contenuti della app.</p>
 
+  <div class="card" id="notify-card" style="border-color:var(--gold);">
+    <label for="notify-title">Titolo notifica (facoltativo)</label>
+    <input type="text" id="notify-title" placeholder="Fvc Project · Novità">
+    <label for="notify-body">Messaggio da inviare a tutti i clienti iscritti</label>
+    <textarea id="notify-body" placeholder="Abbiamo aggiornato il catalogo e le offerte, dai un'occhiata!"></textarea>
+    <button id="send-notify-btn" style="width:100%;">📣 Invia notifica ai clienti</button>
+    <p class="hint" style="margin-top:10px;">Salva prima tutte le modifiche in Negozio, Catalogo e Offerte, poi usa questo pulsante una sola volta per avvisare i clienti.</p>
+  </div>
+
   <div class="tabbar">
     <button class="tabbtn active" data-tab="negozio">Negozio</button>
     <button class="tabbtn" data-tab="catalogo">Catalogo</button>
@@ -164,10 +173,6 @@
         <button class="secondary" id="cancel-product">Annulla</button>
         <button id="save-product">Salva prodotto</button>
       </div>
-    </div>
-
-    <div class="form-actions" style="margin-top:18px;">
-      <button id="save-catalogo">Salva catalogo</button>
     </div>
   </div>
 
@@ -250,6 +255,21 @@
   document.getElementById('pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(e.target.value); });
   if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
 
+  document.getElementById('send-notify-btn').addEventListener('click', async () => {
+    const title = document.getElementById('notify-title').value.trim();
+    const body = document.getElementById('notify-body').value.trim();
+    if (!body) { toast('Scrivi il messaggio da inviare.', true); return; }
+    if (!confirm('Inviare questa notifica a tutti i clienti iscritti?')) return;
+    try {
+      await apiFetch('/api/admin/notify', { method: 'POST', body: JSON.stringify({ title, body }) });
+      toast('Notifica inviata a tutti i clienti.');
+      document.getElementById('notify-title').value = '';
+      document.getElementById('notify-body').value = '';
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+
   // ---------------- TABS ----------------
   document.querySelectorAll('.tabbtn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -309,9 +329,13 @@
         phone: document.getElementById('n-phone').value.trim(),
         whatsapp: document.getElementById('n-whatsapp').value.trim(),
         hours: collectHours().filter(h => h.label || h.value),
+        notify: {
+          title: `${document.getElementById('n-name').value.trim() || 'Fvc Project'} · Novità`,
+          body: 'Abbiamo aggiornato le informazioni del negozio.'
+        }
       };
       config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(payload) });
-      toast('Info negozio salvate.');
+      toast('Info negozio salvate e notifica inviata.');
     } catch (err) {
       toast('Errore: ' + err.message, true);
     }
@@ -383,35 +407,45 @@
     document.getElementById('product-form-card').style.display = 'none';
   });
   window.editProduct = (i) => openProductForm(i);
-  window.removeProduct = (i) => {
+
+  async function publishCatalog(successMsg, notifyBody){
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          products: config.products,
+          notify: { title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`, body: notifyBody }
+        })
+      });
+      toast(successMsg);
+    } catch (err) {
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
+  }
+
+  window.removeProduct = async (i) => {
     if (!confirm('Eliminare questo prodotto?')) return;
+    const removedName = config.products[currentCat][i].name;
     config.products[currentCat].splice(i, 1);
     renderProducts();
-    toast('Prodotto rimosso. Ricorda di premere "Salva catalogo".');
+    await publishCatalog('Prodotto eliminato e pubblicato.', `${removedName} non è più disponibile.`);
   };
 
-  document.getElementById('save-product').addEventListener('click', () => {
+  document.getElementById('save-product').addEventListener('click', async () => {
     const name = document.getElementById('p-name').value.trim();
     const spec = document.getElementById('p-spec').value.trim();
     const price = document.getElementById('p-price').value.trim();
     if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
     const product = { name, spec, price, stock: stockValue };
     const idx = Number(document.getElementById('p-editing-index').value);
+    const isNew = idx < 0;
     if (!config.products[currentCat]) config.products[currentCat] = [];
     if (idx >= 0) config.products[currentCat][idx] = product;
     else config.products[currentCat].push(product);
     document.getElementById('product-form-card').style.display = 'none';
     renderProducts();
-    toast('Prodotto pronto. Ricorda di premere "Salva catalogo" per pubblicarlo.');
-  });
-
-  document.getElementById('save-catalogo').addEventListener('click', async () => {
-    try {
-      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify({ products: config.products }) });
-      toast('Catalogo pubblicato.');
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    }
+    const notifyBody = isNew ? `Novità: ${name} — ${price}` : `Aggiornato: ${name} — ${price}`;
+    await publishCatalog('Prodotto salvato e pubblicato.', notifyBody);
   });
 
   // ---------------- OFFERTE ----------------
