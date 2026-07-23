@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pannello di gestione — Fvc Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
+    --text:#EDF1F5; --text-dim:#8B98A8; --gold:#D4AF37; --cyan:#4FD8E8;
+    --danger:#E5675F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:'Inter', system-ui, sans-serif; padding:24px 16px 60px;
+  }
+  .wrap{max-width:560px; margin:0 auto;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:20px; margin:0 0 4px;}
+  p.lead{color:var(--text-dim); font-size:12.5px; margin:0 0 18px;}
+  label{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; display:block; margin:0 0 6px;}
+  input, textarea{
+    width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-size:13.5px; margin-bottom:12px;
+    font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:56px;}
+  input:focus, textarea:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button{
+    padding:10px 15px; border-radius:9px; border:none;
+    background:var(--gold); color:#141821; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  button.secondary{background:var(--surface-alt); color:var(--text); border:1px solid var(--border);}
+  button.danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
+  button:disabled{opacity:.5; cursor:default;}
+
+  #login{max-width:320px; margin:80px auto 0;}
+  #login button{width:100%;}
+  #login .error{color:var(--danger); font-size:12.5px; margin:-6px 0 12px; display:none;}
+
+  #panel{display:none;}
+
+  .tabbar{display:flex; gap:6px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0;}
+  .tabbtn{
+    flex:1; background:none; border:none; color:var(--text-dim); font-size:12.5px;
+    font-weight:600; padding:10px 4px; cursor:pointer; border-bottom:2px solid transparent;
+    border-radius:0;
+  }
+  .tabbtn.active{color:var(--gold); border-bottom-color:var(--gold);}
+  .tabpage{display:none;}
+  .tabpage.active{display:block;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:12px;
+  }
+  .card .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .card h3{margin:0 0 4px; font-size:14.5px; font-weight:600;}
+  .card .pct{font-family:'Space Grotesk', sans-serif; color:var(--gold); font-weight:700; font-size:15px;}
+  .card p{margin:0; font-size:12px; color:var(--text-dim);}
+  .card .actions{display:flex; gap:8px; margin-top:12px;}
+  .card .actions button{flex:1; font-size:12px; padding:8px;}
+
+  .section-title{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold);
+    text-transform:uppercase; letter-spacing:.08em; margin:22px 0 10px;
+  }
+  .form-actions{display:flex; gap:10px;}
+  .form-actions button{flex:1;}
+  .heat-row{display:flex; gap:8px; margin-bottom:14px;}
+  .heat-opt{
+    flex:1; text-align:center; padding:9px 0; border-radius:8px; border:1px solid var(--border);
+    cursor:pointer; font-size:13px; color:var(--text-dim);
+  }
+  .heat-opt.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
+
+  .hours-row{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:start;}
+  .cat-tabs{display:flex; gap:6px; margin-bottom:14px;}
+  .cat-tab{
+    flex:1; font-family:'IBM Plex Mono', monospace; font-size:11.5px; padding:8px 4px;
+    border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer;
+  }
+  .cat-tab.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
+
+  .toast{
+    position:fixed; left:16px; right:16px; bottom:16px; background:var(--surface);
+    border:1px solid var(--cyan); border-radius:10px; padding:12px 14px; font-size:13px;
+    display:none; max-width:528px; margin:0 auto; z-index:100;
+  }
+  .toast.show{display:block;}
+  .toast.error{border-color:var(--danger); color:var(--danger);}
+  .hint{font-size:11.5px; color:var(--text-dim); margin:-6px 0 14px;}
+</style>
+</head>
+<body>
+
+<div id="login" class="wrap">
+  <h1>Pannello di gestione</h1>
+  <p class="lead">Fvc Project — accesso riservato</p>
+  <label for="pwd">Password</label>
+  <input type="password" id="pwd" placeholder="••••••••">
+  <p class="error" id="login-error">Password non corretta.</p>
+  <button id="login-btn">Accedi</button>
+</div>
+
+<div id="panel" class="wrap">
+  <h1>Pannello di gestione</h1>
+  <p class="lead">Fvc Project — modifica i contenuti della app.</p>
+
+  <div class="card" id="notify-card" style="border-color:var(--gold);">
+    <label for="notify-title">Titolo notifica (facoltativo)</label>
+    <input type="text" id="notify-title" placeholder="Fvc Project · Novità">
+    <label for="notify-body">Messaggio da inviare a tutti i clienti iscritti</label>
+    <textarea id="notify-body" placeholder="Abbiamo aggiornato il catalogo e le offerte, dai un'occhiata!"></textarea>
+    <button id="send-notify-btn" style="width:100%;">📣 Invia notifica ai clienti</button>
+    <p class="hint" style="margin-top:10px;">Salva prima tutte le modifiche in Negozio, Catalogo e Offerte, poi usa questo pulsante una sola volta per avvisare i clienti.</p>
+  </div>
+
+  <div class="tabbar">
+    <button class="tabbtn active" data-tab="negozio">Negozio</button>
+    <button class="tabbtn" data-tab="catalogo">Catalogo</button>
+    <button class="tabbtn" data-tab="offerte">Offerte</button>
+  </div>
+
+  <!-- ===================== NEGOZIO ===================== -->
+  <div class="tabpage active" id="tab-negozio">
+    <div class="card">
+      <label for="n-name">Nome negozio</label>
+      <input type="text" id="n-name">
+      <label for="n-address">Indirizzo</label>
+      <input type="text" id="n-address">
+      <p class="hint">Usato anche per generare mappa e indicazioni stradali.</p>
+      <label for="n-phone">Telefono</label>
+      <input type="text" id="n-phone" placeholder="0736 46354">
+      <label for="n-whatsapp">WhatsApp</label>
+      <input type="text" id="n-whatsapp" placeholder="333 123 456">
+      <p class="section-title" style="margin-top:18px;">Orari</p>
+      <div id="hours-rows"></div>
+      <button class="secondary" id="add-hour-row" type="button">+ Aggiungi riga orario</button>
+      <div class="form-actions" style="margin-top:16px;">
+        <button id="save-negozio">Salva info negozio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CATALOGO ===================== -->
+  <div class="tabpage" id="tab-catalogo">
+    <div class="cat-tabs" id="cat-tabs">
+      <button class="cat-tab active" data-cat="smartphone">Smartphone</button>
+      <button class="cat-tab" data-cat="accessori">Accessori</button>
+      <button class="cat-tab" data-cat="ricambi">Ricambi</button>
+    </div>
+    <div id="products-list"></div>
+    <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
+
+    <div class="card" id="product-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="p-editing-index" value="-1">
+      <label for="p-name">Nome</label>
+      <input type="text" id="p-name" placeholder="iPhone 15">
+      <label for="p-spec">Dettaglio (es. 128GB · Nero)</label>
+      <input type="text" id="p-spec" placeholder="128GB · Nero">
+      <label for="p-price">Prezzo (testo libero, es. 799€ o da 39€)</label>
+      <input type="text" id="p-price" placeholder="799€">
+      <label>Disponibilità (barre mostrate in app)</label>
+      <div class="heat-row" id="stock-row">
+        <div class="heat-opt" data-v="1">1</div>
+        <div class="heat-opt" data-v="2">2</div>
+        <div class="heat-opt" data-v="3">3</div>
+        <div class="heat-opt" data-v="4">4</div>
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-product">Annulla</button>
+        <button id="save-product">Salva prodotto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== OFFERTE ===================== -->
+  <div class="tabpage" id="tab-offerte">
+    <button id="new-offer-btn" type="button">+ Nuova offerta</button>
+
+    <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="f-editing-id">
+      <label for="f-id">Id univoco (solo per offerte nuove, es. black-friday-26)</label>
+      <input type="text" id="f-id" placeholder="black-friday-26">
+      <label for="f-pct">Sconto mostrato (es. -20%, 2x1, −50€)</label>
+      <input type="text" id="f-pct" placeholder="-20%">
+      <label for="f-title">Titolo</label>
+      <input type="text" id="f-title" placeholder="Sconto su tutti gli accessori">
+      <label for="f-desc">Descrizione breve</label>
+      <textarea id="f-desc" placeholder="Valido fino a fine mese, solo in negozio."></textarea>
+      <label>Livello "quanto è calda" (barre mostrate in app)</label>
+      <div class="heat-row" id="heat-row">
+        <div class="heat-opt" data-v="1">1</div>
+        <div class="heat-opt" data-v="2">2</div>
+        <div class="heat-opt" data-v="3">3</div>
+        <div class="heat-opt" data-v="4">4</div>
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-btn">Annulla</button>
+        <button id="save-btn">Salva</button>
+      </div>
+    </div>
+
+    <p class="section-title">Offerte attive</p>
+    <div id="offers-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
+  let config = null;
+  let currentCat = 'smartphone';
+  let heatValue = 2;
+  let stockValue = 2;
+
+  function toast(msg, isError){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  async function apiFetch(url, opts = {}){
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD, ...(opts.headers||{}) }
+    });
+    if (res.status === 401) throw new Error('unauthorized');
+    if (!res.ok) { const b = await res.json().catch(()=>({})); throw new Error(b.error || 'Errore'); }
+    return res.status === 204 ? null : res.json();
+  }
+
+  // ---------------- LOGIN ----------------
+  function showPanel(){
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    loadConfig();
+    loadOffers();
+  }
+  async function tryLogin(pwd){
+    ADMIN_PASSWORD = pwd;
+    try {
+      await apiFetch('/api/admin/check', { method: 'POST' });
+      sessionStorage.setItem('fvc_admin_pwd', pwd);
+      showPanel();
+    } catch {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+  document.getElementById('login-btn').addEventListener('click', () => tryLogin(document.getElementById('pwd').value));
+  document.getElementById('pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(e.target.value); });
+  if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
+
+  document.getElementById('send-notify-btn').addEventListener('click', async () => {
+    const title = document.getElementById('notify-title').value.trim();
+    const body = document.getElementById('notify-body').value.trim();
+    if (!body) { toast('Scrivi il messaggio da inviare.', true); return; }
+    if (!confirm('Inviare questa notifica a tutti i clienti iscritti?')) return;
+    try {
+      await apiFetch('/api/admin/notify', { method: 'POST', body: JSON.stringify({ title, body }) });
+      toast('Notifica inviata a tutti i clienti.');
+      document.getElementById('notify-title').value = '';
+      document.getElementById('notify-body').value = '';
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+
+  // ---------------- TABS ----------------
+  document.querySelectorAll('.tabbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabpage').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------------- NEGOZIO ----------------
+  function renderHoursRows(hours){
+    document.getElementById('hours-rows').innerHTML = (hours || []).map((h, i) => `
+      <div class="hours-row" data-i="${i}">
+        <input type="text" class="hour-label" value="${h.label || ''}" placeholder="Lunedì">
+        <input type="text" class="hour-value" value="${h.value || ''}" placeholder="15:30 – 19:30">
+        <button class="danger" type="button" onclick="removeHourRow(${i})" style="padding:10px;">✕</button>
+      </div>
+    `).join('');
+  }
+  window.removeHourRow = function(i){
+    const hours = collectHours();
+    hours.splice(i, 1);
+    renderHoursRows(hours);
+  };
+  document.getElementById('add-hour-row').addEventListener('click', () => {
+    const hours = collectHours();
+    hours.push({ label: '', value: '' });
+    renderHoursRows(hours);
+  });
+  function collectHours(){
+    return [...document.querySelectorAll('.hours-row')].map(row => ({
+      label: row.querySelector('.hour-label').value.trim(),
+      value: row.querySelector('.hour-value').value.trim(),
+    }));
+  }
+
+  async function loadConfig(){
+    try {
+      config = await apiFetch('/api/admin/config');
+      document.getElementById('n-name').value = config.shopName || '';
+      document.getElementById('n-address').value = config.address || '';
+      document.getElementById('n-phone').value = config.phone || '';
+      document.getElementById('n-whatsapp').value = config.whatsapp || '';
+      renderHoursRows(config.hours || []);
+      renderProducts();
+    } catch (err) {
+      toast('Errore nel caricamento: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('save-negozio').addEventListener('click', async () => {
+    try {
+      const payload = {
+        shopName: document.getElementById('n-name').value.trim(),
+        address: document.getElementById('n-address').value.trim(),
+        phone: document.getElementById('n-phone').value.trim(),
+        whatsapp: document.getElementById('n-whatsapp').value.trim(),
+        hours: collectHours().filter(h => h.label || h.value),
+      };
+      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Info negozio salvate.');
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+
+  // ---------------- CATALOGO ----------------
+  document.getElementById('cat-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-tab');
+    if (!btn) return;
+    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    renderProducts();
+  });
+
+  function stockDots(n){
+    let out = '';
+    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
+    return out;
+  }
+
+  function renderProducts(){
+    if (!config || !config.products) return;
+    const list = document.getElementById('products-list');
+    const items = config.products[currentCat] || [];
+    if (items.length === 0){
+      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun prodotto in questa categoria.</p>';
+      return;
+    }
+    list.innerHTML = items.map((p, i) => `
+      <div class="card">
+        <div class="row">
+          <div>
+            <h3>${p.name}</h3>
+            <p>${p.spec || ''}</p>
+          </div>
+          <div class="pct">${p.price}</div>
+        </div>
+        <div style="margin-top:8px;">${stockDots(p.stock)}</div>
+        <div class="actions">
+          <button class="secondary" onclick='editProduct(${i})'>Modifica</button>
+          <button class="danger" onclick="removeProduct(${i})">Elimina</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setStock(v){
+    stockValue = v;
+    document.querySelectorAll('#stock-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
+  }
+  document.getElementById('stock-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setStock(Number(opt.dataset.v));
+  });
+
+  function openProductForm(index){
+    document.getElementById('product-form-card').style.display = 'block';
+    document.getElementById('p-editing-index').value = index;
+    const p = index >= 0 ? config.products[currentCat][index] : null;
+    document.getElementById('p-name').value = p ? p.name : '';
+    document.getElementById('p-spec').value = p ? p.spec : '';
+    document.getElementById('p-price').value = p ? p.price : '';
+    setStock(p ? p.stock : 2);
+    document.getElementById('p-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
+  document.getElementById('cancel-product').addEventListener('click', () => {
+    document.getElementById('product-form-card').style.display = 'none';
+  });
+  window.editProduct = (i) => openProductForm(i);
+
+  async function publishCatalog(successMsg){
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({ products: config.products })
+      });
+      toast(successMsg);
+    } catch (err) {
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
+  }
+
+  window.removeProduct = async (i) => {
+    if (!confirm('Eliminare questo prodotto?')) return;
+    config.products[currentCat].splice(i, 1);
+    renderProducts();
+    await publishCatalog('Prodotto eliminato e pubblicato.');
+  };
+
+  document.getElementById('save-product').addEventListener('click', async () => {
+    const name = document.getElementById('p-name').value.trim();
+    const spec = document.getElementById('p-spec').value.trim();
+    const price = document.getElementById('p-price').value.trim();
+    if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
+    const product = { name, spec, price, stock: stockValue };
+    const idx = Number(document.getElementById('p-editing-index').value);
+    if (!config.products[currentCat]) config.products[currentCat] = [];
+    if (idx >= 0) config.products[currentCat][idx] = product;
+    else config.products[currentCat].push(product);
+    document.getElementById('product-form-card').style.display = 'none';
+    renderProducts();
+    await publishCatalog('Prodotto salvato e pubblicato.');
+  });
+
+  // ---------------- OFFERTE ----------------
+  function heatDots(n){
+    let out = '';
+    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
+    return out;
+  }
+
+  async function loadOffers(){
+    try {
+      const offers = await apiFetch('/api/admin/offers');
+      const list = document.getElementById('offers-list');
+      if (offers.length === 0){
+        list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna offerta al momento.</p>';
+        return;
+      }
+      list.innerHTML = offers.map(o => `
+        <div class="card">
+          <div class="row">
+            <div>
+              <h3>${o.title}</h3>
+              <p>${o.desc || ''}</p>
+            </div>
+            <div class="pct">${o.pct}</div>
+          </div>
+          <div style="margin-top:8px;">${heatDots(o.heat)}</div>
+          <div class="actions">
+            <button class="secondary" onclick='editOffer(${JSON.stringify(o).replace(/'/g,"&apos;")})'>Modifica</button>
+            <button class="danger" onclick="removeOffer('${o.id}')">Elimina</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      toast('Errore nel caricamento: ' + err.message, true);
+    }
+  }
+
+  function setHeat(v){
+    heatValue = v;
+    document.querySelectorAll('#heat-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
+  }
+  document.getElementById('heat-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setHeat(Number(opt.dataset.v));
+  });
+
+  function openForm(offer){
+    document.getElementById('offer-form-card').style.display = 'block';
+    document.getElementById('f-editing-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').disabled = !!offer;
+    document.getElementById('f-pct').value = offer ? offer.pct : '';
+    document.getElementById('f-title').value = offer ? offer.title : '';
+    document.getElementById('f-desc').value = offer ? (offer.desc || '') : '';
+    setHeat(offer ? offer.heat : 2);
+    document.getElementById('f-id').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('new-offer-btn').addEventListener('click', () => openForm(null));
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    document.getElementById('offer-form-card').style.display = 'none';
+  });
+  window.editOffer = (offer) => openForm(offer);
+  window.removeOffer = async (id) => {
+    if (!confirm('Eliminare questa offerta?')) return;
+    try {
+      await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method: 'DELETE' });
+      toast('Offerta eliminata.');
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  };
+
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    const editingId = document.getElementById('f-editing-id').value;
+    const payload = {
+      id: document.getElementById('f-id').value.trim(),
+      pct: document.getElementById('f-pct').value.trim(),
+      title: document.getElementById('f-title').value.trim(),
+      desc: document.getElementById('f-desc').value.trim(),
+      heat: heatValue
+    };
+    if (!payload.id || !payload.pct || !payload.title){
+      toast('Compila almeno id, sconto e titolo.', true);
+      return;
+    }
+    try {
+      if (editingId){
+        await apiFetch('/api/admin/offers/' + encodeURIComponent(editingId), { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Offerta aggiornata.');
+      } else {
+        await apiFetch('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Offerta creata: notifica inviata a tutti gli iscritti.');
+      }
+      document.getElementById('offer-form-card').style.display = 'none';
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+</script>
+</body>
+</html>
