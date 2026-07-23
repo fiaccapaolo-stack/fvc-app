@@ -235,6 +235,7 @@ async function main() {
   // lasciando invariato il resto della configurazione. Se il pannello manda
   // anche un campo "notify" ({title, body}), avvisa subito tutti gli iscritti.
   app.put("/api/admin/config", requireAdmin, async (req, res) => {
+    console.log("DEBUG: ricevuto PUT /api/admin/config, campi:", Object.keys(req.body || {}));
     const current = (await getConfig()) || DEFAULT_CONFIG;
     const { notify, ...body } = req.body || {};
     const updated = { ...current, ...body };
@@ -316,7 +317,7 @@ async function main() {
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`Fvc Project attivo su http://localhost:${PORT}`);
+    console.log(`Fvc Project [build-check-v3] attivo su http://localhost:${PORT}`);
   });
 }
 
