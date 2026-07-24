@@ -121,6 +121,7 @@
   <div class="tabbar">
     <button class="tabbtn active" data-tab="negozio">Negozio</button>
     <button class="tabbtn" data-tab="catalogo">Catalogo</button>
+    <button class="tabbtn" data-tab="gestori">Gestori</button>
     <button class="tabbtn" data-tab="offerte">Offerte</button>
   </div>
 
@@ -173,6 +174,39 @@
       <div class="form-actions">
         <button class="secondary" id="cancel-product">Annulla</button>
         <button id="save-product">Salva prodotto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GESTORI ===================== -->
+  <div class="tabpage" id="tab-gestori">
+    <div class="cat-tabs" id="carrier-cat-tabs">
+      <button class="cat-tab active" data-carrier="tim">TIM</button>
+      <button class="cat-tab" data-carrier="wind">WindTre</button>
+      <button class="cat-tab" data-carrier="sky">Sky</button>
+      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
+      <button class="cat-tab" data-carrier="very">VeryMobile</button>
+      <button class="cat-tab" data-carrier="kena">Kena</button>
+    </div>
+    <div id="carrier-plans-list"></div>
+    <button id="add-plan-btn" type="button">+ Nuovo piano</button>
+
+    <div class="card" id="plan-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="pl-editing-index" value="-1">
+      <label for="pl-name">Nome piano</label>
+      <input type="text" id="pl-name" placeholder="Power Iron">
+      <label for="pl-type">Tipo</label>
+      <div class="heat-row" id="plan-type-row">
+        <div class="heat-opt" data-v="mobile">Mobile</div>
+        <div class="heat-opt" data-v="fibra">Fibra</div>
+      </div>
+      <label for="pl-price">Prezzo (es. 9,99€/mese)</label>
+      <input type="text" id="pl-price" placeholder="9,99€/mese">
+      <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
+      <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
+      <div class="form-actions">
+        <button class="secondary" id="cancel-plan">Annulla</button>
+        <button id="save-plan">Salva piano</button>
       </div>
     </div>
   </div>
@@ -317,6 +351,7 @@
       document.getElementById('n-whatsapp').value = config.whatsapp || '';
       renderHoursRows(config.hours || []);
       renderProducts();
+      renderCarrierPlansList();
     } catch (err) {
       toast('Errore nel caricamento: ' + err.message, true);
     }
@@ -447,6 +482,109 @@
     renderProducts();
     const notifyBody = isNew ? `Novità: ${name} — ${price}` : `Aggiornato: ${name} — ${price}`;
     await publishCatalog('Prodotto salvato e pubblicato.', notifyBody);
+  });
+
+  // ---------------- GESTORI ----------------
+  let currentCarrier = 'tim';
+
+  document.getElementById('carrier-cat-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-tab');
+    if (!btn) return;
+    document.querySelectorAll('#carrier-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCarrier = btn.dataset.carrier;
+    renderCarrierPlansList();
+  });
+
+  function renderCarrierPlansList(){
+    if (!config || !config.carriers) return;
+    const list = document.getElementById('carrier-plans-list');
+    const items = config.carriers[currentCarrier] || [];
+    if (items.length === 0){
+      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun piano per questo gestore.</p>';
+      return;
+    }
+    list.innerHTML = items.map((p, i) => `
+      <div class="card">
+        <div class="row">
+          <div>
+            <h3>${p.name}</h3>
+            <p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p>
+          </div>
+          <div class="pct">${p.price}</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" onclick='editPlan(${i})'>Modifica</button>
+          <button class="danger" onclick="removePlan(${i})">Elimina</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  let planTypeValue = 'mobile';
+  function setPlanType(v){
+    planTypeValue = v;
+    document.querySelectorAll('#plan-type-row .heat-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
+  }
+  document.getElementById('plan-type-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setPlanType(opt.dataset.v);
+  });
+
+  function openPlanForm(index){
+    document.getElementById('plan-form-card').style.display = 'block';
+    document.getElementById('pl-editing-index').value = index;
+    const p = index >= 0 ? config.carriers[currentCarrier][index] : null;
+    document.getElementById('pl-name').value = p ? p.name : '';
+    document.getElementById('pl-price').value = p ? p.price : '';
+    document.getElementById('pl-details').value = p ? p.details : '';
+    setPlanType(p ? p.type : 'mobile');
+    document.getElementById('pl-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('add-plan-btn').addEventListener('click', () => openPlanForm(-1));
+  document.getElementById('cancel-plan').addEventListener('click', () => {
+    document.getElementById('plan-form-card').style.display = 'none';
+  });
+  window.editPlan = (i) => openPlanForm(i);
+
+  async function publishCarriers(successMsg, notifyBody){
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          carriers: config.carriers,
+          notify: { title: `${config.shopName || 'Fvc Project'} · Telefonia & Fibra`, body: notifyBody }
+        })
+      });
+      toast(successMsg);
+    } catch (err) {
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
+  }
+
+  window.removePlan = async (i) => {
+    if (!confirm('Eliminare questo piano?')) return;
+    const removedName = config.carriers[currentCarrier][i].name;
+    config.carriers[currentCarrier].splice(i, 1);
+    renderCarrierPlansList();
+    await publishCarriers('Piano eliminato e pubblicato.', `${removedName} non è più disponibile.`);
+  };
+
+  document.getElementById('save-plan').addEventListener('click', async () => {
+    const name = document.getElementById('pl-name').value.trim();
+    const price = document.getElementById('pl-price').value.trim();
+    const details = document.getElementById('pl-details').value.trim();
+    if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
+    const plan = { name, type: planTypeValue, price, details };
+    const idx = Number(document.getElementById('pl-editing-index').value);
+    const isNew = idx < 0;
+    if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
+    if (idx >= 0) config.carriers[currentCarrier][idx] = plan;
+    else config.carriers[currentCarrier].push(plan);
+    document.getElementById('plan-form-card').style.display = 'none';
+    renderCarrierPlansList();
+    const notifyBody = isNew ? `Novità ${currentCarrier.toUpperCase()}: ${name} — ${price}` : `Aggiornato ${currentCarrier.toUpperCase()}: ${name} — ${price}`;
+    await publishCarriers('Piano salvato e pubblicato.', notifyBody);
   });
 
   // ---------------- OFFERTE ----------------
