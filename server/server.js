@@ -129,12 +129,42 @@ const DEFAULT_CONFIG = {
       { name: "Connettore ricarica", spec: "Universale", price: "da 19€", stock: 4 },
     ],
   },
+  // Piani telefonia mobile e fibra, divisi per gestore
+  carriers: {
+    tim: [
+      { name: "Tim Power Iron", type: "mobile", price: "9,99€/mese", details: "150GB, minuti e SMS illimitati" },
+    ],
+    wind: [
+      { name: "WindTre Go Unlimited", type: "mobile", price: "11,99€/mese", details: "Giga illimitati, minuti illimitati" },
+    ],
+    sky: [
+      { name: "Sky Wifi", type: "fibra", price: "29,95€/mese", details: "Fibra fino a 1 Giga, modem incluso" },
+    ],
+    lyca: [
+      { name: "Lycamobile Italia 100", type: "mobile", price: "7,99€/mese", details: "100GB, minuti illimitati" },
+    ],
+    very: [
+      { name: "VeryMobile 150GB", type: "mobile", price: "5,99€/mese", details: "150GB, minuti illimitati" },
+    ],
+    kena: [
+      { name: "Kena 150GB", type: "mobile", price: "7,99€/mese", details: "150GB, minuti illimitati" },
+    ],
+  },
 };
 
 async function getConfig() {
   const stored = await redis.get("config");
   if (!stored) return null;
-  return typeof stored === "string" ? JSON.parse(stored) : stored;
+  const parsed = typeof stored === "string" ? JSON.parse(stored) : stored;
+  // Se la configurazione era gia' salvata prima dell'introduzione di un
+  // campo nuovo (es. "carriers"), lo aggiungiamo qui coi valori di partenza,
+  // senza toccare il resto di quello che il negozio ha gia' personalizzato.
+  return {
+    ...DEFAULT_CONFIG,
+    ...parsed,
+    products: parsed.products || DEFAULT_CONFIG.products,
+    carriers: parsed.carriers || DEFAULT_CONFIG.carriers,
+  };
 }
 async function saveConfig(config) {
   await redis.set("config", JSON.stringify(config));
