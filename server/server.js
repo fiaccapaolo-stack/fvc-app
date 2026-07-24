@@ -217,7 +217,7 @@ async function main() {
   await seedConfigIfEmpty();
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "8mb" })); // aumentato per permettere le foto caricate dal pannello
   app.use(express.static(ROOT));
 
   // ---- endpoint pubblici, usati dalla app dei clienti ----
