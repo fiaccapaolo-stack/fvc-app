@@ -92,6 +92,11 @@
   .toast.show{display:block;}
   .toast.error{border-color:var(--danger); color:var(--danger);}
   .hint{font-size:11.5px; color:var(--text-dim); margin:-6px 0 14px;}
+  .photo-row{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .photo-preview{
+    width:56px; height:56px; border-radius:10px; object-fit:cover;
+    border:1px solid var(--border); background:var(--surface-alt); flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -171,6 +176,11 @@
         <div class="heat-opt" data-v="3">3</div>
         <div class="heat-opt" data-v="4">4</div>
       </div>
+      <label for="p-image">Foto (facoltativa)</label>
+      <div class="photo-row">
+        <img id="p-image-preview" class="photo-preview" style="display:none;">
+        <input type="file" id="p-image" accept="image/*">
+      </div>
       <div class="form-actions">
         <button class="secondary" id="cancel-product">Annulla</button>
         <button id="save-product">Salva prodotto</button>
@@ -204,6 +214,11 @@
       <input type="text" id="pl-price" placeholder="9,99€/mese">
       <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
       <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
+      <label for="pl-image">Foto/logo (facoltativa)</label>
+      <div class="photo-row">
+        <img id="pl-image-preview" class="photo-preview" style="display:none;">
+        <input type="file" id="pl-image" accept="image/*">
+      </div>
       <div class="form-actions">
         <button class="secondary" id="cancel-plan">Annulla</button>
         <button id="save-plan">Salva piano</button>
@@ -247,6 +262,30 @@
 
 <script>
   let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
+
+  // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
+  // browser prima di salvarla, cosi' resta leggera per il database gratuito.
+  function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
+          else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Immagine non valida'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Impossibile leggere il file'));
+      reader.readAsDataURL(file);
+    });
+  }
   let config = null;
   let currentCat = 'smartphone';
   let heatValue = 2;
@@ -428,6 +467,7 @@
     if (opt) setStock(Number(opt.dataset.v));
   });
 
+  let productImageData = '';
   function openProductForm(index){
     document.getElementById('product-form-card').style.display = 'block';
     document.getElementById('p-editing-index').value = index;
@@ -436,6 +476,11 @@
     document.getElementById('p-spec').value = p ? p.spec : '';
     document.getElementById('p-price').value = p ? p.price : '';
     setStock(p ? p.stock : 2);
+    productImageData = (p && p.image) ? p.image : '';
+    const preview = document.getElementById('p-image-preview');
+    if (productImageData) { preview.src = productImageData; preview.style.display = 'block'; }
+    else { preview.style.display = 'none'; }
+    document.getElementById('p-image').value = '';
     document.getElementById('p-name').scrollIntoView({ behavior:'smooth', block:'center' });
   }
   document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
@@ -443,6 +488,19 @@
     document.getElementById('product-form-card').style.display = 'none';
   });
   window.editProduct = (i) => openProductForm(i);
+
+  document.getElementById('p-image').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      productImageData = await readAndCompressImage(file);
+      const preview = document.getElementById('p-image-preview');
+      preview.src = productImageData;
+      preview.style.display = 'block';
+    } catch (err) {
+      toast('Errore nel caricare la foto: ' + err.message, true);
+    }
+  });
 
   async function publishCatalog(successMsg, notifyBody){
     try {
@@ -472,7 +530,7 @@
     const spec = document.getElementById('p-spec').value.trim();
     const price = document.getElementById('p-price').value.trim();
     if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
-    const product = { name, spec, price, stock: stockValue };
+    const product = { name, spec, price, stock: stockValue, image: productImageData || '' };
     const idx = Number(document.getElementById('p-editing-index').value);
     const isNew = idx < 0;
     if (!config.products[currentCat]) config.products[currentCat] = [];
@@ -531,6 +589,7 @@
     if (opt) setPlanType(opt.dataset.v);
   });
 
+  let planImageData = '';
   function openPlanForm(index){
     document.getElementById('plan-form-card').style.display = 'block';
     document.getElementById('pl-editing-index').value = index;
@@ -539,6 +598,11 @@
     document.getElementById('pl-price').value = p ? p.price : '';
     document.getElementById('pl-details').value = p ? p.details : '';
     setPlanType(p ? p.type : 'mobile');
+    planImageData = (p && p.image) ? p.image : '';
+    const preview = document.getElementById('pl-image-preview');
+    if (planImageData) { preview.src = planImageData; preview.style.display = 'block'; }
+    else { preview.style.display = 'none'; }
+    document.getElementById('pl-image').value = '';
     document.getElementById('pl-name').scrollIntoView({ behavior:'smooth', block:'center' });
   }
   document.getElementById('add-plan-btn').addEventListener('click', () => openPlanForm(-1));
@@ -546,6 +610,19 @@
     document.getElementById('plan-form-card').style.display = 'none';
   });
   window.editPlan = (i) => openPlanForm(i);
+
+  document.getElementById('pl-image').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      planImageData = await readAndCompressImage(file);
+      const preview = document.getElementById('pl-image-preview');
+      preview.src = planImageData;
+      preview.style.display = 'block';
+    } catch (err) {
+      toast('Errore nel caricare la foto: ' + err.message, true);
+    }
+  });
 
   async function publishCarriers(successMsg, notifyBody){
     try {
@@ -575,7 +652,7 @@
     const price = document.getElementById('pl-price').value.trim();
     const details = document.getElementById('pl-details').value.trim();
     if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
-    const plan = { name, type: planTypeValue, price, details };
+    const plan = { name, type: planTypeValue, price, details, image: planImageData || '' };
     const idx = Number(document.getElementById('pl-editing-index').value);
     const isNew = idx < 0;
     if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
