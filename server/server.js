@@ -150,6 +150,19 @@ const DEFAULT_CONFIG = {
       { name: "Kena 150GB", type: "mobile", price: "7,99€/mese", details: "150GB, minuti illimitati" },
     ],
   },
+  // Piani di rateizzazione telefono offerti dai gestori (es. TIM, WindTre)
+  installments: {
+    tim: [
+      { name: "iPhone 15 a rate con TIM", price: "24 rate da 33,29€/mese", details: "TAN 0% TAEG 0%, nessuna spesa aggiuntiva" },
+    ],
+    wind: [
+      { name: "Galaxy S24 a rate con WindTre", price: "30 rate da 25,90€/mese", details: "Anticipo 0€, TAN 0% TAEG 0%" },
+    ],
+    sky: [],
+    lyca: [],
+    very: [],
+    kena: [],
+  },
 };
 
 async function getConfig() {
@@ -164,6 +177,7 @@ async function getConfig() {
     ...parsed,
     products: parsed.products || DEFAULT_CONFIG.products,
     carriers: parsed.carriers || DEFAULT_CONFIG.carriers,
+    installments: parsed.installments || DEFAULT_CONFIG.installments,
   };
 }
 async function saveConfig(config) {
