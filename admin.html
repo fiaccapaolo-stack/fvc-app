@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pannello di gestione — Fvc Project</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
@@ -21,13 +22,13 @@
   h1{font-family:'Space Grotesk', sans-serif; font-size:20px; margin:0 0 4px;}
   p.lead{color:var(--text-dim); font-size:12.5px; margin:0 0 18px;}
   label{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; display:block; margin:0 0 6px;}
-  input, textarea{
+  input, textarea, select{
     width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--border);
     background:var(--surface); color:var(--text); font-size:13.5px; margin-bottom:12px;
     font-family:inherit;
   }
   textarea{resize:vertical; min-height:56px;}
-  input:focus, textarea:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--cyan); outline-offset:1px;}
   button{
     padding:10px 15px; border-radius:9px; border:none;
     background:var(--gold); color:#141821; font-weight:600; font-size:13px; cursor:pointer;
@@ -92,6 +93,8 @@
   .toast.show{display:block;}
   .toast.error{border-color:var(--danger); color:var(--danger);}
   .hint{font-size:11.5px; color:var(--text-dim); margin:-6px 0 14px;}
+  .cta-row2{display:flex; gap:10px; margin-bottom:4px;}
+  .cta-row2 button{flex:1;}
   .photo-row{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
   .photo-preview{
     width:56px; height:56px; border-radius:10px; object-fit:cover;
@@ -127,6 +130,7 @@
     <button class="tabbtn active" data-tab="negozio">Negozio</button>
     <button class="tabbtn" data-tab="catalogo">Catalogo</button>
     <button class="tabbtn" data-tab="gestori">Gestori</button>
+    <button class="tabbtn" data-tab="rate">Rate</button>
     <button class="tabbtn" data-tab="offerte">Offerte</button>
   </div>
 
@@ -214,7 +218,7 @@
       <input type="text" id="pl-price" placeholder="9,99€/mese">
       <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
       <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
-      <label for="pl-image">Foto/logo (facoltativa)</label>
+      <label for="pl-image">Foto dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
       <div class="photo-row">
         <img id="pl-image-preview" class="photo-preview" style="display:none;">
         <input type="file" id="pl-image" accept="image/*">
@@ -222,6 +226,64 @@
       <div class="form-actions">
         <button class="secondary" id="cancel-plan">Annulla</button>
         <button id="save-plan">Salva piano</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RATE ===================== -->
+  <div class="tabpage" id="tab-rate">
+    <div class="cat-tabs" id="installment-cat-tabs">
+      <button class="cat-tab active" data-carrier="tim">TIM</button>
+      <button class="cat-tab" data-carrier="wind">WindTre</button>
+      <button class="cat-tab" data-carrier="sky">Sky</button>
+      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
+      <button class="cat-tab" data-carrier="very">VeryMobile</button>
+      <button class="cat-tab" data-carrier="kena">Kena</button>
+    </div>
+    <div id="installment-plans-list"></div>
+    <div class="cta-row2">
+      <button id="add-installment-btn" type="button">+ Nuova rateizzazione</button>
+      <button id="import-excel-btn" type="button" class="secondary">📄 Importa da Excel</button>
+    </div>
+    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;">
+
+    <div class="card" id="import-card" style="display:none; margin-top:12px;">
+      <p class="section-title" style="margin-top:0;">Importa rateizzazioni da Excel</p>
+      <p class="hint" id="import-summary"></p>
+      <label for="import-col-name">Colonna per il nome/modello</label>
+      <select id="import-col-name"></select>
+      <label for="import-col-price">Colonna per la rata/prezzo</label>
+      <select id="import-col-price"></select>
+      <label for="import-col-details">Colonna per i dettagli (facoltativa)</label>
+      <select id="import-col-details"></select>
+      <div id="import-preview" style="font-size:12px; color:var(--text-dim); margin-bottom:14px;"></div>
+      <label>Cosa fare con le rateizzazioni gi&agrave; presenti per questo gestore?</label>
+      <div class="heat-row" id="import-mode-row">
+        <div class="heat-opt active" data-v="append">Aggiungi</div>
+        <div class="heat-opt" data-v="replace">Sostituisci tutto</div>
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-import">Annulla</button>
+        <button id="confirm-import">Importa adesso</button>
+      </div>
+    </div>
+
+    <div class="card" id="installment-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="in-editing-index" value="-1">
+      <label for="in-name">Nome (es. iPhone 15 a rate con TIM)</label>
+      <input type="text" id="in-name" placeholder="iPhone 15 a rate con TIM">
+      <label for="in-price">Rate (es. 24 rate da 33,29€/mese)</label>
+      <input type="text" id="in-price" placeholder="24 rate da 33,29€/mese">
+      <label for="in-details">Dettagli (es. TAN 0% TAEG 0%)</label>
+      <input type="text" id="in-details" placeholder="TAN 0% TAEG 0%, nessuna spesa aggiuntiva">
+      <label for="in-image">Foto del volantino rateizzazione — oppure lascia gli altri campi vuoti se carichi solo questa</label>
+      <div class="photo-row">
+        <img id="in-image-preview" class="photo-preview" style="display:none;">
+        <input type="file" id="in-image" accept="image/*">
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-installment">Annulla</button>
+        <button id="save-installment">Salva rateizzazione</button>
       </div>
     </div>
   </div>
@@ -391,6 +453,7 @@
       renderHoursRows(config.hours || []);
       renderProducts();
       renderCarrierPlansList();
+      renderInstallmentPlansList();
     } catch (err) {
       toast('Errore nel caricamento: ' + err.message, true);
     }
@@ -564,13 +627,16 @@
     }
     list.innerHTML = items.map((p, i) => `
       <div class="card">
-        <div class="row">
-          <div>
-            <h3>${p.name}</h3>
-            <p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p>
-          </div>
-          <div class="pct">${p.price}</div>
-        </div>
+        ${p.isPhoto
+          ? `<img src="${p.image}" style="width:100%;border-radius:10px;display:block;margin-bottom:8px;">
+             <p style="color:var(--text-dim);">Offerta caricata come foto</p>`
+          : `<div class="row">
+              <div>
+                <h3>${p.name}</h3>
+                <p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p>
+              </div>
+              <div class="pct">${p.price}</div>
+            </div>`}
         <div class="actions">
           <button class="secondary" onclick='editPlan(${i})'>Modifica</button>
           <button class="danger" onclick="removePlan(${i})">Elimina</button>
@@ -615,7 +681,9 @@
     const file = e.target.files[0];
     if (!file) return;
     try {
-      planImageData = await readAndCompressImage(file);
+      // Risoluzione piu' alta per i piani: spesso e' la foto di un volantino
+      // (anche in formato A5), e il testo deve restare leggibile.
+      planImageData = await readAndCompressImage(file, 900, 0.78);
       const preview = document.getElementById('pl-image-preview');
       preview.src = planImageData;
       preview.style.display = 'block';
@@ -641,7 +709,7 @@
 
   window.removePlan = async (i) => {
     if (!confirm('Eliminare questo piano?')) return;
-    const removedName = config.carriers[currentCarrier][i].name;
+    const removedName = config.carriers[currentCarrier][i].name || "un'offerta";
     config.carriers[currentCarrier].splice(i, 1);
     renderCarrierPlansList();
     await publishCarriers('Piano eliminato e pubblicato.', `${removedName} non è più disponibile.`);
@@ -651,8 +719,18 @@
     const name = document.getElementById('pl-name').value.trim();
     const price = document.getElementById('pl-price').value.trim();
     const details = document.getElementById('pl-details').value.trim();
-    if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
-    const plan = { name, type: planTypeValue, price, details, image: planImageData || '' };
+    // Se hai caricato una foto (es. il volantino dell'offerta), non serve
+    // compilare anche gli altri campi: viene mostrata cosi' com'e'.
+    if (!planImageData && (!name || !price)) {
+      toast('Compila nome e prezzo, oppure carica una foto dell\'offerta.', true);
+      return;
+    }
+    const isPhotoOnly = !!planImageData && !name && !price;
+    const plan = {
+      name, type: planTypeValue, price, details,
+      image: planImageData || '',
+      isPhoto: isPhotoOnly
+    };
     const idx = Number(document.getElementById('pl-editing-index').value);
     const isNew = idx < 0;
     if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
@@ -660,8 +738,254 @@
     else config.carriers[currentCarrier].push(plan);
     document.getElementById('plan-form-card').style.display = 'none';
     renderCarrierPlansList();
-    const notifyBody = isNew ? `Novità ${currentCarrier.toUpperCase()}: ${name} — ${price}` : `Aggiornato ${currentCarrier.toUpperCase()}: ${name} — ${price}`;
+    const label = name || `un'offerta ${currentCarrier.toUpperCase()}`;
+    const notifyBody = isNew ? `Novità ${currentCarrier.toUpperCase()}: ${label}` : `Aggiornato ${currentCarrier.toUpperCase()}: ${label}`;
     await publishCarriers('Piano salvato e pubblicato.', notifyBody);
+  });
+
+  // ---------------- RATE ----------------
+  let currentInstallmentCarrier = 'tim';
+  let installmentImageData = '';
+
+  document.getElementById('installment-cat-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-tab');
+    if (!btn) return;
+    document.querySelectorAll('#installment-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentInstallmentCarrier = btn.dataset.carrier;
+    renderInstallmentPlansList();
+  });
+
+  function renderInstallmentPlansList(){
+    if (!config || !config.installments) return;
+    const list = document.getElementById('installment-plans-list');
+    const items = config.installments[currentInstallmentCarrier] || [];
+    if (items.length === 0){
+      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna rateizzazione per questo gestore.</p>';
+      return;
+    }
+    list.innerHTML = items.map((p, i) => `
+      <div class="card">
+        ${p.isPhoto
+          ? `<img src="${p.image}" style="width:100%;border-radius:10px;display:block;margin-bottom:8px;">
+             <p style="color:var(--text-dim);">Rateizzazione caricata come foto</p>`
+          : `<div class="row">
+              <div>
+                <h3>${p.name}</h3>
+                <p>${p.details || ''}</p>
+              </div>
+              <div class="pct">${p.price}</div>
+            </div>`}
+        <div class="actions">
+          <button class="secondary" onclick='editInstallment(${i})'>Modifica</button>
+          <button class="danger" onclick="removeInstallment(${i})">Elimina</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openInstallmentForm(index){
+    document.getElementById('installment-form-card').style.display = 'block';
+    document.getElementById('in-editing-index').value = index;
+    const p = index >= 0 ? config.installments[currentInstallmentCarrier][index] : null;
+    document.getElementById('in-name').value = p ? p.name : '';
+    document.getElementById('in-price').value = p ? p.price : '';
+    document.getElementById('in-details').value = p ? p.details : '';
+    installmentImageData = (p && p.image) ? p.image : '';
+    const preview = document.getElementById('in-image-preview');
+    if (installmentImageData) { preview.src = installmentImageData; preview.style.display = 'block'; }
+    else { preview.style.display = 'none'; }
+    document.getElementById('in-image').value = '';
+    document.getElementById('in-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('add-installment-btn').addEventListener('click', () => openInstallmentForm(-1));
+
+  // ---- importazione da file Excel/CSV ----
+  let importedRows = []; // array di oggetti riga (una per ogni riga del file)
+  let importedHeaders = [];
+  let importMode = 'append';
+
+  document.getElementById('import-excel-btn').addEventListener('click', () => {
+    document.getElementById('excel-file-input').click();
+  });
+
+  document.getElementById('excel-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Libreria di lettura Excel non disponibile: controlla la connessione internet.', true);
+      return;
+    }
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      if (rows.length === 0) {
+        toast('Il file sembra vuoto o non leggibile.', true);
+        return;
+      }
+      importedRows = rows;
+      importedHeaders = Object.keys(rows[0]);
+      openImportPanel();
+    } catch (err) {
+      toast('Errore nella lettura del file: ' + err.message, true);
+    }
+    e.target.value = '';
+  });
+
+  // Prova a indovinare quale colonna e' nome/prezzo/dettagli in base al
+  // nome dell'intestazione, cosi' il negoziante deve solo confermare.
+  function guessColumn(headers, keywords) {
+    const lower = headers.map(h => h.toLowerCase());
+    for (const kw of keywords) {
+      const idx = lower.findIndex(h => h.includes(kw));
+      if (idx >= 0) return headers[idx];
+    }
+    return headers[0] || '';
+  }
+
+  function openImportPanel(){
+    document.getElementById('import-card').style.display = 'block';
+    document.getElementById('import-summary').textContent =
+      `Trovate ${importedRows.length} righe nel file. Indica quale colonna corrisponde a cosa:`;
+
+    const nameSel = document.getElementById('import-col-name');
+    const priceSel = document.getElementById('import-col-price');
+    const detailsSel = document.getElementById('import-col-details');
+    const options = importedHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
+    nameSel.innerHTML = options;
+    priceSel.innerHTML = `<option value="">— nessuna —</option>` + options;
+    detailsSel.innerHTML = `<option value="">— nessuna —</option>` + options;
+
+    nameSel.value = guessColumn(importedHeaders, ['modello', 'dispositivo', 'device', 'nome', 'smartphone', 'prodotto']);
+    priceSel.value = guessColumn(importedHeaders, ['rata', 'canone', 'prezzo', 'importo', 'mese']);
+    detailsSel.value = guessColumn(importedHeaders, ['note', 'dettagli', 'descrizione', 'tan', 'taeg', 'condizioni']);
+
+    updateImportPreview();
+    nameSel.onchange = updateImportPreview;
+    priceSel.onchange = updateImportPreview;
+    detailsSel.onchange = updateImportPreview;
+
+    document.getElementById('import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function updateImportPreview(){
+    const nameCol = document.getElementById('import-col-name').value;
+    const priceCol = document.getElementById('import-col-price').value;
+    const preview = importedRows.slice(0, 3).map(r => {
+      const n = r[nameCol] || '(vuoto)';
+      const p = priceCol ? (r[priceCol] || '(vuoto)') : '—';
+      return `${n} · ${p}`;
+    }).join('<br>');
+    document.getElementById('import-preview').innerHTML = `<strong>Anteprima prime righe:</strong><br>${preview}`;
+  }
+
+  document.getElementById('cancel-import').addEventListener('click', () => {
+    document.getElementById('import-card').style.display = 'none';
+  });
+
+  document.getElementById('import-mode-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (!opt) return;
+    importMode = opt.dataset.v;
+    document.querySelectorAll('#import-mode-row .heat-opt').forEach(el => el.classList.toggle('active', el === opt));
+  });
+
+  document.getElementById('confirm-import').addEventListener('click', async () => {
+    const nameCol = document.getElementById('import-col-name').value;
+    const priceCol = document.getElementById('import-col-price').value;
+    const detailsCol = document.getElementById('import-col-details').value;
+
+    const newPlans = importedRows
+      .map(r => ({
+        name: String(r[nameCol] || '').trim(),
+        price: priceCol ? String(r[priceCol] || '').trim() : '',
+        details: detailsCol ? String(r[detailsCol] || '').trim() : '',
+        image: '', isPhoto: false
+      }))
+      .filter(p => p.name); // scarta righe senza nome (es. righe vuote/di intestazione)
+
+    if (newPlans.length === 0) {
+      toast('Nessuna riga valida trovata con questa colonna nome.', true);
+      return;
+    }
+
+    if (!config.installments[currentInstallmentCarrier]) config.installments[currentInstallmentCarrier] = [];
+    if (importMode === 'replace') {
+      config.installments[currentInstallmentCarrier] = newPlans;
+    } else {
+      config.installments[currentInstallmentCarrier] = config.installments[currentInstallmentCarrier].concat(newPlans);
+    }
+
+    document.getElementById('import-card').style.display = 'none';
+    renderInstallmentPlansList();
+    await publishInstallments(
+      `Importate ${newPlans.length} rateizzazioni.`,
+      `Abbiamo aggiornato le rateizzazioni ${currentInstallmentCarrier.toUpperCase()}: ${newPlans.length} nuove opzioni disponibili.`
+    );
+  });
+  document.getElementById('cancel-installment').addEventListener('click', () => {
+    document.getElementById('installment-form-card').style.display = 'none';
+  });
+  window.editInstallment = (i) => openInstallmentForm(i);
+
+  document.getElementById('in-image').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      installmentImageData = await readAndCompressImage(file, 900, 0.78);
+      const preview = document.getElementById('in-image-preview');
+      preview.src = installmentImageData;
+      preview.style.display = 'block';
+    } catch (err) {
+      toast('Errore nel caricare la foto: ' + err.message, true);
+    }
+  });
+
+  async function publishInstallments(successMsg, notifyBody){
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          installments: config.installments,
+          notify: { title: `${config.shopName || 'Fvc Project'} · Acquista a rate`, body: notifyBody }
+        })
+      });
+      toast(successMsg);
+    } catch (err) {
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
+  }
+
+  window.removeInstallment = async (i) => {
+    if (!confirm('Eliminare questa rateizzazione?')) return;
+    const removedName = config.installments[currentInstallmentCarrier][i].name || "una rateizzazione";
+    config.installments[currentInstallmentCarrier].splice(i, 1);
+    renderInstallmentPlansList();
+    await publishInstallments('Rateizzazione eliminata e pubblicata.', `${removedName} non è più disponibile.`);
+  };
+
+  document.getElementById('save-installment').addEventListener('click', async () => {
+    const name = document.getElementById('in-name').value.trim();
+    const price = document.getElementById('in-price').value.trim();
+    const details = document.getElementById('in-details').value.trim();
+    if (!installmentImageData && (!name || !price)) {
+      toast('Compila nome e rate, oppure carica una foto del volantino.', true);
+      return;
+    }
+    const isPhotoOnly = !!installmentImageData && !name && !price;
+    const plan = { name, price, details, image: installmentImageData || '', isPhoto: isPhotoOnly };
+    const idx = Number(document.getElementById('in-editing-index').value);
+    const isNew = idx < 0;
+    if (!config.installments[currentInstallmentCarrier]) config.installments[currentInstallmentCarrier] = [];
+    if (idx >= 0) config.installments[currentInstallmentCarrier][idx] = plan;
+    else config.installments[currentInstallmentCarrier].push(plan);
+    document.getElementById('installment-form-card').style.display = 'none';
+    renderInstallmentPlansList();
+    const label = name || `una rateizzazione ${currentInstallmentCarrier.toUpperCase()}`;
+    const notifyBody = isNew ? `Nuova rateizzazione ${currentInstallmentCarrier.toUpperCase()}: ${label}` : `Aggiornata rateizzazione ${currentInstallmentCarrier.toUpperCase()}: ${label}`;
+    await publishInstallments('Rateizzazione salvata e pubblicata.', notifyBody);
   });
 
   // ---------------- OFFERTE ----------------
