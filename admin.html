@@ -7,6 +7,7 @@
 <title>Pannello di gestione — Fvc Project</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
@@ -218,10 +219,10 @@
       <input type="text" id="pl-price" placeholder="9,99€/mese">
       <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
       <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
-      <label for="pl-image">Foto dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
+      <label for="pl-image">Foto o PDF dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
       <div class="photo-row">
         <img id="pl-image-preview" class="photo-preview" style="display:none;">
-        <input type="file" id="pl-image" accept="image/*">
+        <input type="file" id="pl-image" accept="image/*,.pdf,application/pdf">
       </div>
       <div class="form-actions">
         <button class="secondary" id="cancel-plan">Annulla</button>
@@ -276,10 +277,10 @@
       <input type="text" id="in-price" placeholder="24 rate da 33,29€/mese">
       <label for="in-details">Dettagli (es. TAN 0% TAEG 0%)</label>
       <input type="text" id="in-details" placeholder="TAN 0% TAEG 0%, nessuna spesa aggiuntiva">
-      <label for="in-image">Foto del volantino rateizzazione — oppure lascia gli altri campi vuoti se carichi solo questa</label>
+      <label for="in-image">Foto o PDF del volantino rateizzazione — oppure lascia gli altri campi vuoti se carichi solo questa</label>
       <div class="photo-row">
         <img id="in-image-preview" class="photo-preview" style="display:none;">
-        <input type="file" id="in-image" accept="image/*">
+        <input type="file" id="in-image" accept="image/*,.pdf,application/pdf">
       </div>
       <div class="form-actions">
         <button class="secondary" id="cancel-installment">Annulla</button>
@@ -323,6 +324,29 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // Converte la prima pagina di un PDF in un'immagine, cosi' si puo'
+  // caricare direttamente il volantino PDF di un gestore senza doverlo
+  // prima trasformare a mano in foto.
+  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
+    if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = maxWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.82);
+  }
+
+  function isPdfFile(file){
+    return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  }
+
   let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
 
   // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
@@ -683,7 +707,9 @@
     try {
       // Risoluzione piu' alta per i piani: spesso e' la foto di un volantino
       // (anche in formato A5), e il testo deve restare leggibile.
-      planImageData = await readAndCompressImage(file, 900, 0.78);
+      planImageData = isPdfFile(file)
+        ? await renderPdfFirstPageToDataUrl(file, 900)
+        : await readAndCompressImage(file, 900, 0.78);
       const preview = document.getElementById('pl-image-preview');
       preview.src = planImageData;
       preview.style.display = 'block';
@@ -934,7 +960,9 @@
     const file = e.target.files[0];
     if (!file) return;
     try {
-      installmentImageData = await readAndCompressImage(file, 900, 0.78);
+      installmentImageData = isPdfFile(file)
+        ? await renderPdfFirstPageToDataUrl(file, 900)
+        : await readAndCompressImage(file, 900, 0.78);
       const preview = document.getElementById('in-image-preview');
       preview.src = installmentImageData;
       preview.style.display = 'block';
