@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FVC_ADMIN_BUILD: v4-notify-fix -->
+<!-- FVC_ADMIN_BUILD: v5-bulk-delete -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -246,6 +246,9 @@
       <button id="add-installment-btn" type="button">+ Nuova rateizzazione</button>
       <button id="import-excel-btn" type="button" class="secondary">📄 Importa da Excel</button>
     </div>
+    <div class="cta-row2" style="margin-top:10px;">
+      <button id="clear-installments-btn" type="button" class="danger">🗑 Svuota tutte le rateizzazioni</button>
+    </div>
     <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
     <div class="card" id="import-card" style="display:none; margin-top:12px;">
@@ -291,7 +294,10 @@
 
   <!-- ===================== OFFERTE ===================== -->
   <div class="tabpage" id="tab-offerte">
-    <button id="new-offer-btn" type="button">+ Nuova offerta</button>
+    <div class="cta-row2">
+      <button id="new-offer-btn" type="button">+ Nuova offerta</button>
+      <button id="clear-offers-btn" type="button" class="danger">🗑 Elimina tutte</button>
+    </div>
 
     <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
       <input type="hidden" id="f-editing-id">
@@ -994,6 +1000,50 @@
     await publishInstallments('Rateizzazione eliminata e pubblicata.', `${removedName} non è più disponibile.`);
   };
 
+  // ---- Eliminazione in blocco delle rateizzazioni ----
+  // Salva la config senza campo "notify", cosi' NON parte alcuna notifica push.
+  async function saveInstallmentsSilently(successMsg){
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({ installments: config.installments })
+      });
+      toast(successMsg);
+    } catch (err) {
+      toast('Errore nel salvare: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('clear-installments-btn').addEventListener('click', async () => {
+    if (!config || !config.installments) return;
+    const carrier = currentInstallmentCarrier;
+    const count = (config.installments[carrier] || []).length;
+    const totale = Object.values(config.installments).reduce((n, arr) => n + (arr ? arr.length : 0), 0);
+    if (totale === 0){
+      toast('Non c\'e\' nessuna rateizzazione da eliminare.', true);
+      return;
+    }
+    const soloQuesto = confirm(
+      `Vuoi eliminare le ${count} rateizzazioni di ${carrier.toUpperCase()}?\n\n` +
+      `OK = svuota solo ${carrier.toUpperCase()}\n` +
+      `Annulla = scegli se svuotare TUTTI i gestori (${totale} in totale)`
+    );
+    if (soloQuesto){
+      if (count === 0){
+        toast('Questo gestore non ha rateizzazioni.', true);
+        return;
+      }
+      config.installments[carrier] = [];
+      renderInstallmentPlansList();
+      await saveInstallmentsSilently(`Eliminate ${count} rateizzazioni di ${carrier.toUpperCase()}.`);
+    } else {
+      if (!confirm(`Eliminare TUTTE le ${totale} rateizzazioni di tutti i gestori? L'operazione non e' reversibile.`)) return;
+      Object.keys(config.installments).forEach(k => { config.installments[k] = []; });
+      renderInstallmentPlansList();
+      await saveInstallmentsSilently(`Eliminate tutte le ${totale} rateizzazioni.`);
+    }
+  });
+
   document.getElementById('save-installment').addEventListener('click', async () => {
     const name = document.getElementById('in-name').value.trim();
     const price = document.getElementById('in-price').value.trim();
@@ -1087,6 +1137,22 @@
       toast('Errore: ' + err.message, true);
     }
   };
+
+  // ---- Eliminazione in blocco delle offerte ----
+  document.getElementById('clear-offers-btn').addEventListener('click', async () => {
+    if (!confirm('Eliminare TUTTE le offerte pubblicate? L\'operazione non e\' reversibile.')) return;
+    const notify = confirm('Vuoi avvisare gli iscritti con una notifica che le promozioni sono terminate?\n\nOK = invia una notifica\nAnnulla = elimina in silenzio');
+    try {
+      const res = await apiFetch('/api/admin/offers', {
+        method: 'DELETE',
+        body: JSON.stringify({ notify })
+      });
+      toast(`Eliminate ${res.removed} offerte.`);
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
 
   document.getElementById('save-btn').addEventListener('click', async () => {
     const editingId = document.getElementById('f-editing-id').value;
