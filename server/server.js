@@ -336,6 +336,26 @@ async function main() {
     res.json(updated);
   });
 
+  // Eliminazione in blocco: svuota TUTTE le offerte in un colpo solo.
+  // Di default non invia notifiche (sarebbe una raffica di push agli utenti);
+  // passare { notify: true } per avvisare che le promozioni sono terminate.
+  app.delete("/api/admin/offers", requireAdmin, async (req, res) => {
+    const existing = await getOffers();
+    for (const offer of existing) {
+      await deleteOffer(offer.id);
+    }
+    const wantsNotify = req.body && req.body.notify === true;
+    if (wantsNotify && existing.length > 0) {
+      const cfg = (await getConfig()) || DEFAULT_CONFIG;
+      await sendToAll({
+        title: `${cfg.shopName} · Offerte aggiornate`,
+        body: "Le promozioni precedenti sono terminate. Restate sintonizzati!",
+      });
+    }
+    console.log(`Eliminate in blocco ${existing.length} offerte dal pannello.`);
+    res.json({ ok: true, removed: existing.length });
+  });
+
   app.delete("/api/admin/offers/:id", requireAdmin, async (req, res) => {
     const existing = await getOffers();
     const toRemove = existing.find((o) => o.id === req.params.id);
