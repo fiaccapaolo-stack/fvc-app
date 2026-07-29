@@ -292,10 +292,11 @@ async function main() {
       updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
     }
     await saveConfig(updated);
-    if (notify && notify.body) {
-      console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
-      await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
-    }
+    // Ogni modifica pubblicata dal pannello avvisa SEMPRE i clienti iscritti.
+    const notifyBody = (notify && notify.body) || "Abbiamo appena aggiornato l'app: dai un'occhiata alle novità!";
+    const notifyTitle = (notify && notify.title) || `${updated.shopName} · Novità`;
+    console.log("Modifica pubblicata dal pannello, invio notifica:", notifyBody);
+    await sendToAll({ title: notifyTitle, body: notifyBody });
     res.json(updated);
   });
 
@@ -337,14 +338,15 @@ async function main() {
   });
 
   // Eliminazione in blocco: svuota TUTTE le offerte in un colpo solo.
-  // Di default non invia notifiche (sarebbe una raffica di push agli utenti);
-  // passare { notify: true } per avvisare che le promozioni sono terminate.
+  // Invia sempre una singola notifica riepilogativa agli iscritti
+  // (passare { notify: false } solo per casi eccezionali).
   app.delete("/api/admin/offers", requireAdmin, async (req, res) => {
     const existing = await getOffers();
     for (const offer of existing) {
       await deleteOffer(offer.id);
     }
-    const wantsNotify = req.body && req.body.notify === true;
+    // Notifica sempre: i clienti devono sapere subito che le offerte sono cambiate.
+    const wantsNotify = !(req.body && req.body.notify === false);
     if (wantsNotify && existing.length > 0) {
       const cfg = (await getConfig()) || DEFAULT_CONFIG;
       await sendToAll({
