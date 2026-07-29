@@ -1001,12 +1001,18 @@
   };
 
   // ---- Eliminazione in blocco delle rateizzazioni ----
-  // Salva la config senza campo "notify", cosi' NON parte alcuna notifica push.
-  async function saveInstallmentsSilently(successMsg){
+  // Salva e avvisa SEMPRE i clienti con una notifica riepilogativa.
+  async function saveInstallmentsSilently(successMsg, notifyBody){
     try {
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
-        body: JSON.stringify({ installments: config.installments })
+        body: JSON.stringify({
+          installments: config.installments,
+          notify: {
+            title: `${config.shopName || 'Fvc Project'} · Acquista a rate`,
+            body: notifyBody || 'Le rateizzazioni sono state aggiornate.'
+          }
+        })
       });
       toast(successMsg);
     } catch (err) {
@@ -1035,12 +1041,12 @@
       }
       config.installments[carrier] = [];
       renderInstallmentPlansList();
-      await saveInstallmentsSilently(`Eliminate ${count} rateizzazioni di ${carrier.toUpperCase()}.`);
+      await saveInstallmentsSilently(`Eliminate ${count} rateizzazioni di ${carrier.toUpperCase()}. Notifica inviata.`, `Le rateizzazioni ${carrier.toUpperCase()} non sono piu' disponibili.`);
     } else {
       if (!confirm(`Eliminare TUTTE le ${totale} rateizzazioni di tutti i gestori? L'operazione non e' reversibile.`)) return;
       Object.keys(config.installments).forEach(k => { config.installments[k] = []; });
       renderInstallmentPlansList();
-      await saveInstallmentsSilently(`Eliminate tutte le ${totale} rateizzazioni.`);
+      await saveInstallmentsSilently(`Eliminate tutte le ${totale} rateizzazioni. Notifica inviata.`, 'Le rateizzazioni precedenti sono terminate. Restate sintonizzati!');
     }
   });
 
@@ -1141,13 +1147,12 @@
   // ---- Eliminazione in blocco delle offerte ----
   document.getElementById('clear-offers-btn').addEventListener('click', async () => {
     if (!confirm('Eliminare TUTTE le offerte pubblicate? L\'operazione non e\' reversibile.')) return;
-    const notify = confirm('Vuoi avvisare gli iscritti con una notifica che le promozioni sono terminate?\n\nOK = invia una notifica\nAnnulla = elimina in silenzio');
     try {
       const res = await apiFetch('/api/admin/offers', {
         method: 'DELETE',
-        body: JSON.stringify({ notify })
+        body: JSON.stringify({ notify: true })
       });
-      toast(`Eliminate ${res.removed} offerte.`);
+      toast(`Eliminate ${res.removed} offerte. Notifica inviata ai clienti.`);
       loadOffers();
     } catch (err) {
       toast('Errore: ' + err.message, true);
