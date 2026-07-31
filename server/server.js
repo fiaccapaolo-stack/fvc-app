@@ -13,111 +13,149 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const webpush = require('web-push');
-const multer = require('multer'); // Per upload file
-const XLSX = require('xlsx');     // Per leggere Excel/CSV
+const multer = require('multer');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURAZIONE VAPID PER NOTIFICHE PUSH ---
-// Sostituisci con le tue chiavi reali generate tramite 'npx web-push generate-vapid-keys'
-const vapidKeys = {
-  publicKey: 'YOUR_PUBLIC_KEY_HERE',
-  privateKey: 'YOUR_PRIVATE_KEY_HERE'
+// --- CONFIGURAZIONE VAPID SICURA ---
+// Il server non crasherà se le chiavi mancano, ma le notifiche non partiranno finché non le imposti.
+let vapidKeys = {
+  publicKey: process.env.VAPID_PUBLIC_KEY || '',
+  privateKey: process.env.VAPID_PRIVATE_KEY || ''
 };
 
-webpush.setVapidDetails(
-  'mailto:tuo@email.com',
-  vapidKeys.publicKey,
-  vapidKeys.privateKey
-);
+if (vapidKeys.publicKey && vapidKeys.privateKey) {
+  try {
+    webpush.setVapidDetails(
+      'mailto:support@fvcproject.it',
+      vapidKeys.publicKey,
+      vapidKeys.privateKey
+    );
+    console.log('✅ Chiavi VAPID caricate correttamente.');
+  } catch (e) {
+    console.warn('⚠️ Chiavi VAPID non valide. Le notifiche push saranno disabilitate.', e.message);
+    vapidKeys = { publicKey: '', privateKey: '' }; // Reset per sicurezza
+  }
+} else {
+  console.warn('⚠️ Variabili d\'ambiente VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY non trovate.');
+  console.warn('   Le notifiche push non funzioneranno finché non le configuri nelle impostazioni di Render.');
+}
 
 // --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, '../public'))); // Serve i file statici (frontend)
+
+// Serve i file statici dalla cartella 'public' (che si trova un livello sopra rispetto a /server)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Percorsi per i dati
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const OFFERS_FILE = path.join(DATA_DIR, 'offers.json');
-const RATES_FILE = path.join(DATA_DIR, 'tim-rates.json'); // Nuovo file per le rate
+const RATES_FILE = path.join(DATA_DIR, 'tim-rates.json');
 
 // Assicurati che la cartella data esista
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  console.log(`📁 Cartella dati creata: ${DATA_DIR}`);
+}
 
 // --- CONFIGURAZIONE MULTER (UPLOAD FILE) ---
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    cb(null, uploadsDir);
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    cb(null, 'import_rates.xlsx'); // Sovrascrive sempre lo stesso file temporaneo
+    const ext = path.extname(file.originalname) || '.xlsx';
+    cb(null, 'import_rates_temp' + ext);
   }
 });
 const upload = multer({ storage: storage });
 
 // --- FUNZIONI DI SUPPORTO ---
+
 function readJsonFile(file, defaultData) {
   try {
     if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
+      const content = fs.readFileSync(file, 'utf8');
+      return JSON.parse(content);
     }
-  } catch (e) { console.error(`Errore lettura ${file}:`, e); }
+  } catch (e) {
+    console.error(`Errore lettura ${file}:`, e.message);
+  }
   return defaultData;
 }
 
 function writeJsonFile(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+  console.log(`💾 File salvato: ${file}`);
 }
 
-// Logica di parsing specifica per il formato TIM (come nello script locale)
+// Logica di parsing specifica per il formato TIM
 function parseTimData(filePath) {
   try {
+    console.log(`🔄 Inicio parsing di: ${filePath}`);
     const workbook = XLSX.readFile(filePath);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    
     const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    if (rawData.length === 0) throw new Error("File vuoto");
+    if (rawData.length === 0) throw new Error("Il file sembra vuoto");
 
-    // Trova intestazioni dinamicamente
-    let startRowIndex = 0;
+    let headerRowIndex = -1;
     let headers = [];
-    
-    // Cerca la riga delle intestazioni (dove c'è "PRODOTTO" o simile)
-    for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+
+    for (let i = 0; i < Math.min(rawData.length, 15); i++) {
       const rowStr = rawData[i].join(' ').toLowerCase();
-      if (rowStr.includes('prodotto') && rowStr.includes('rata')) {
+      if (rowStr.includes('prodotto')) {
+        headerRowIndex = i;
         headers = rawData[i].map(h => String(h).trim().toLowerCase());
-        startRowIndex = i + 1;
         break;
       }
     }
 
-    if (headers.length === 0) throw new Error("Intestazioni non trovate");
+    if (headerRowIndex === -1) {
+      throw new Error("Intestazione 'PRODOTTO' non trovata nelle prime 15 righe.");
+    }
 
     const idxProdotto = headers.findIndex(h => h.includes('prodotto'));
-    const idxRate = headers.findIndex(h => h.includes('rata') && !h.includes('prezzo'));
-    const idxPrezzo = headers.findIndex(h => h.includes('prezzo') || (h.includes('rata') && h.includes('euro')));
+    const idxRate = headers.findIndex(h => (h.includes('rata') || h.includes('rate')) && !h.includes('prezzo') && !h.includes('euro'));
+    let idxPrezzo = headers.findIndex(h => h.includes('prezzo') && h.includes('rata'));
+    if (idxPrezzo === -1) {
+       idxPrezzo = headers.findIndex(h => h.includes('rata') && (h.includes('euro') || h.includes('€') || h.includes('prezzo')));
+    }
 
-    if (idxProdotto === -1) throw new Error("Colonna Prodotto non trovata");
+    console.log(`🎯 Colonne trovate: Prodotto=${idxProdotto}, Rate=${idxRate}, Prezzo=${idxPrezzo}`);
 
     const results = {};
+    let count = 0;
 
-    for (let i = startRowIndex; i < rawData.length; i++) {
+    for (let i = headerRowIndex + 1; i < rawData.length; i++) {
       const row = rawData[i];
+      if (!row || row.length === 0) continue;
+
       const prodottiRaw = row[idxProdotto];
-      
-      // Se non ci sono dati nella riga, salta
       if (!prodottiRaw) continue;
 
-      // Recupera valori comuni della riga
-      const rateVal = (idxRate !== -1 && row[idxRate]) ? Number(String(row[idxRate]).replace(/[^0-9]/g, '')) : 0;
-      const prezzoVal = (idxPrezzo !== -1 && row[idxPrezzo]) ? String(row[idxPrezzo]).replace(',', '.') : "0";
-      
-      // Gestione prodotti multipli nella stessa cella (separati da a capo)
+      let rateVal = 0;
+      if (idxRate !== -1 && row[idxRate]) {
+        const rawRate = String(row[idxRate]);
+        rateVal = parseInt(rawRate.replace(/[^0-9]/g, ''), 10) || 0;
+      }
+
+      let prezzoVal = 0;
+      if (idxPrezzo !== -1 && row[idxPrezzo]) {
+        const rawPrice = String(row[idxPrezzo]);
+        const cleanPrice = rawPrice.replace(',', '.').replace(/[^0-9.]/g, '');
+        prezzoVal = parseFloat(cleanPrice) || 0;
+      }
+
       let prodottiLista = [];
       if (typeof prodottiRaw === 'string') {
         prodottiLista = prodottiRaw.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
@@ -125,31 +163,31 @@ function parseTimData(filePath) {
         prodottiLista = [String(prodottiRaw)];
       }
 
-      // Mappa ogni prodotto al suo oggetto rateale
       prodottiLista.forEach(prodotto => {
-        // Pulizia nome prodotto per matching migliore (opzionale)
         const cleanName = prodotto.trim();
-        
-        // Salviamo in un oggetto chiave-valore: NomeProdotto -> DatiRate
-        results[cleanName] = {
-          rate: rateVal,
-          prezzoRata: parseFloat(prezzoVal) || 0,
-          operatore: "TIM",
-          timestamp: new Date().toISOString()
-        };
+        if (cleanName) {
+          results[cleanName] = {
+            rate: rateVal,
+            prezzoRata: prezzoVal,
+            operatore: "TIM",
+            timestamp: new Date().toISOString()
+          };
+          count++;
+        }
       });
     }
 
+    console.log(`✅ Parsing completato. Trovate ${count} voci.`);
     return results;
+
   } catch (error) {
-    console.error("Errore parsing Excel:", error);
+    console.error("❌ Errore critico nel parsing Excel:", error.message);
     throw error;
   }
 }
 
 // --- API ENDPOINTS ---
 
-// 1. Configurazione Negozio
 app.get('/api/config', (req, res) => {
   const config = readJsonFile(CONFIG_FILE, { shopName: 'Fvc Project Srl', address: 'Indirizzo esempio' });
   res.json(config);
@@ -158,21 +196,15 @@ app.get('/api/config', (req, res) => {
 app.post('/api/config', async (req, res) => {
   const newConfig = req.body;
   const currentConfig = readJsonFile(CONFIG_FILE, {});
-  
-  // Unisci configurazione esistente con nuova (mantieni prodotti se non inviati)
   const finalConfig = { ...currentConfig, ...newConfig };
-  
   writeJsonFile(CONFIG_FILE, finalConfig);
   
-  // Se flag presente, invia notifica
   if (newConfig.sendNotification) {
     await sendNotificationToAll('Catalogo Aggiornato', 'Nuovi prodotti disponibili nel negozio!');
   }
-  
   res.json({ success: true });
 });
 
-// 2. Offerte
 app.get('/api/offers', (req, res) => {
   const offers = readJsonFile(OFFERS_FILE, []);
   res.json(offers);
@@ -184,65 +216,81 @@ app.post('/api/offers', async (req, res) => {
   res.json({ success: true });
 });
 
-// 3. NUOVO: Importazione Rate da Excel
+// Importazione Rate da Excel
 app.post('/api/import-rates', upload.single('excelFile'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'Nessun file caricato' });
+    return res.status(400).json({ error: 'Nessun file caricato.' });
   }
 
   try {
-    console.log(`Elaborazione file: ${req.file.path}`);
+    console.log(`📂 Elaborazione file: ${req.file.path}`);
     const ratesData = parseTimData(req.file.path);
-    
-    // Salva il database delle rate
     writeJsonFile(RATES_FILE, ratesData);
     
-    // Opzionale: Elimina file temporaneo dopo elaborazione
     fs.unlinkSync(req.file.path);
+    console.log("🗑️ File temporaneo eliminato.");
 
-    console.log(`Importate ${Object.keys(ratesData).length} voci rateali.`);
-    
-    // Invia notifica opzionale (potresti volerla disabilitare se fai update frequenti)
-    // await sendNotificationToAll('Listino Rate Aggiornato', 'Le nuove rateizzazioni TIM sono disponibili.');
-
-    res.json({ success: true, count: Object.keys(ratesData).length });
+    res.json({ 
+      success: true, 
+      message: `Importate ${Object.keys(ratesData).length} voci.`,
+      count: Object.keys(ratesData).length
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: "Errore elaborazione: " + error.message });
   }
 });
 
-// Endpoint per ottenere le rate (usato dal frontend)
 app.get('/api/rates', (req, res) => {
   const rates = readJsonFile(RATES_FILE, {});
   res.json(rates);
 });
 
-// 4. Notifiche Push
-let subscriptions = []; // In produzione usa un DB reale (Redis/Mongo)
+// Notifiche Push
+let subscriptions = []; 
 
 app.get('/api/vapid-public-key', (req, res) => {
+  if (!vapidKeys.publicKey) {
+    return res.status(500).json({ error: 'Chiavi VAPID non configurate sul server.' });
+  }
   res.json({ publicKey: vapidKeys.publicKey });
 });
 
 app.post('/api/subscribe', (req, res) => {
   const subscription = req.body;
-  // Evita duplicati
   const exists = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
-  if (!exists) subscriptions.push(subscription);
-  res.status(201).json({});
+  if (!exists) {
+    subscriptions.push(subscription);
+    console.log(`🔔 Nuova sottoscrizione. Totale: ${subscriptions.length}`);
+  }
+  res.status(201).json({ success: true });
 });
 
 async function sendNotificationToAll(title, body) {
-  const payload = JSON.stringify({ title, body });
+  if (!vapidKeys.publicKey) {
+    console.warn("⚠️ Notifica ignorata: Chiavi VAPID mancanti.");
+    return;
+  }
+  if (subscriptions.length === 0) {
+    console.log("⚠️ Nessun cliente iscritto.");
+    return;
+  }
+  
+  const payload = JSON.stringify({ title, body, icon: '/icons/icon-192.png' });
+  console.log(`🚀 Invio notifica "${title}"...`);
+  
   const promises = subscriptions.map(sub => 
-    webpush.sendNotification(sub, payload).catch(err => console.error('Errore invio notifica:', err))
+    webpush.sendNotification(sub, payload).catch(err => console.error('Errore invio:', err.message))
   );
   await Promise.all(promises);
 }
 
-// --- AVVIO SERVER ---
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`Server attivo su http://localhost:${PORT}`);
-  console.log(`Cartella dati: ${DATA_DIR}`);
+  console.log(`\n🚀 Server Fvc Project attivo sulla porta ${PORT}`);
+  console.log(`📁 Dati: ${DATA_DIR}`);
+  console.log(`📂 Upload: ${uploadDir}\n`);
 });
