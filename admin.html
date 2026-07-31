@@ -12,32 +12,31 @@
     --text: #f1f5f9;
     --text-dim: #94a3b8;
     --primary: #3b82f6;
-    --success: #22c55e;
     --danger: #ef4444;
+    --success: #22c55e;
     --gold: #D4AF37;
   }
-  * { box-sizing: border-box; }
   body {
-    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
     padding: 20px;
   }
   h1, h2 { margin-top: 0; }
+  .container { max-width: 900px; margin: 0 auto; }
   
-  .container { max-width: 800px; margin: 0 auto; }
-  
+  /* Card Styles */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
   }
-
-  .form-group { margin-bottom: 15px; }
-  label { display: block; margin-bottom: 5px; color: var(--text-dim); font-size: 0.9em; }
+  
+  /* Form Elements */
+  label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-dim); }
   input, select, textarea {
     width: 100%;
     padding: 10px;
@@ -45,27 +44,27 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     color: var(--text);
-    font-size: 14px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
   }
   input:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
-
-  .btn {
-    display: inline-block;
+  
+  /* Buttons */
+  button {
     padding: 10px 20px;
-    border-radius: 6px;
     border: none;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
-    text-align: center;
     transition: opacity 0.2s;
   }
-  .btn:hover { opacity: 0.9; }
+  button:hover { opacity: 0.9; }
   .btn-primary { background: var(--primary); color: white; }
-  .btn-success { background: var(--success); color: white; width: 100%; font-size: 1.1em; padding: 15px; margin-top: 10px;}
-  .btn-danger { background: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; }
-  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
-
-  .product-list { list-style: none; padding: 0; }
+  .btn-success { background: var(--success); color: white; width: 100%; font-size: 1.1rem; padding: 15px; margin-top: 10px;}
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-gold { background: var(--gold); color: #000; }
+  
+  /* Product List */
   .product-item {
     display: flex;
     justify-content: space-between;
@@ -74,299 +73,354 @@
     border-bottom: 1px solid var(--border);
   }
   .product-item:last-child { border-bottom: none; }
+  .product-info { flex: 1; }
+  .product-actions { display: flex; gap: 10px; }
   
+  /* Tabs */
   .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-  .tab {
-    padding: 8px 16px;
-    border-radius: 20px;
-    background: var(--surface);
+  .tab-btn {
+    background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    cursor: pointer;
+    padding: 8px 16px;
   }
-  .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-  .hidden { display: none; }
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
   
-  #status-msg {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 6px;
-    text-align: center;
-    font-weight: bold;
+  .hidden { display: none; }
+  .notification-badge {
+    background: var(--danger);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-left: 5px;
   }
-  .status-ok { background: rgba(34, 197, 94, 0.2); color: var(--success); }
-  .status-err { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
 </style>
 </head>
 <body>
 
 <div class="container">
   <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-    <h1>Admin Panel</h1>
-    <button class="btn btn-ghost" onclick="window.location.href='/'">🏠 Torna al Sito</button>
+    <h1>Pannello Admin</h1>
+    <a href="/" style="color:var(--text-dim); text-decoration:none;">← Torna all'App</a>
   </header>
 
-  <!-- SEZIONE CATALOGO -->
+  <!-- Sezione Configurazione Negozio -->
   <div class="card">
-    <h2>📦 Gestione Catalogo</h2>
-    
+    <h2>🏪 Configurazione Negozio</h2>
+    <form id="shop-form">
+      <label>Nome Negozio</label>
+      <input type="text" id="shop-name" required>
+      
+      <label>Indirizzo</label>
+      <input type="text" id="shop-address" required>
+      
+      <label>Telefono</label>
+      <input type="text" id="shop-phone" required>
+      
+      <label>WhatsApp (solo numero)</label>
+      <input type="text" id="shop-whatsapp" placeholder="39333123456">
+      
+      <button type="submit" class="btn-primary">Salva Configurazione</button>
+    </form>
+  </div>
+
+  <!-- Sezione Gestione Catalogo -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2>📱 Gestione Catalogo</h2>
+      <span id="pending-count" class="hidden" style="background:var(--gold); color:#000; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:0.8rem;">
+        Modifiche in sospeso: <span id="count-val">0</span>
+      </span>
+    </div>
+
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('smartphone')">Smartphone</div>
-      <div class="tab" onclick="switchTab('accessori')">Accessori</div>
-      <div class="tab" onclick="switchTab('ricambi')">Ricambi</div>
+      <button class="tab-btn active" onclick="switchTab('smartphone')">Smartphone</button>
+      <button class="tab-btn" onclick="switchTab('accessori')">Accessori</button>
+      <button class="tab-btn" onclick="switchTab('ricambi')">Ricambi</button>
     </div>
 
     <!-- Form Aggiunta Prodotto -->
-    <div style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
-      <h3 style="margin-top:0; font-size:1rem; color:var(--gold);">Aggiungi / Modifica Prodotto</h3>
-      <input type="hidden" id="prod-id">
-      <div class="form-group">
-        <label>Nome Prodotto</label>
-        <input type="text" id="prod-name" placeholder="Es. iPhone 15">
-      </div>
-      <div class="form-group">
-        <label>Specifiche</label>
-        <input type="text" id="prod-spec" placeholder="Es. 128GB, Nero">
-      </div>
-      <div class="form-group">
-        <label>Prezzo</label>
-        <input type="text" id="prod-price" placeholder="Es. 799€">
-      </div>
-      <div class="form-group">
-        <label>Disponibilità (1-4)</label>
-        <input type="number" id="prod-stock" min="0" max="4" value="4">
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn btn-primary" onclick="addOrUpdateProduct()">Salva nella Lista</button>
-        <button class="btn btn-ghost" onclick="clearForm()">Pulisci</button>
-      </div>
+    <div style="background:var(--bg); padding:15px; border-radius:6px; margin-bottom:20px; border:1px dashed var(--border);">
+      <h3 style="margin-top:0; font-size:1rem;">Aggiungi Nuovo Prodotto</h3>
+      <input type="text" id="prod-name" placeholder="Nome prodotto (es. iPhone 15)">
+      <input type="text" id="prod-spec" placeholder="Specifiche (es. 128GB Nero)">
+      <input type="text" id="prod-price" placeholder="Prezzo (es. 799€)">
+      <input type="number" id="prod-stock" placeholder="Stock (1-4)" min="1" max="4">
+      <button onclick="addProduct()" class="btn-primary" style="width:100%">Aggiungi alla Lista</button>
     </div>
 
     <!-- Lista Prodotti Corrente -->
-    <h3>Prodotti in lista (<span id="count-display">0</span>)</h3>
-    <ul class="product-list" id="product-list-ul">
+    <h3>Prodotti Attuali (<span id="current-cat">smartphone</span>)</h3>
+    <div id="product-list" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:6px;">
       <!-- Items injected via JS -->
-    </ul>
-    
-    <div style="margin-top: 20px; border-top: 1px solid var(--border); paddingTop: 20px;">
-      <p style="color: var(--text-dim); font-size: 0.9em; margin-bottom: 10px;">
-        ⚠️ Le modifiche alla lista non sono visibili ai clienti finché non premi il pulsante verde qui sotto.
-        Puoi aggiungere/modificare quanti prodotti vuoi senza disturbare i clienti.
-      </p>
-      <button class="btn btn-success" onclick="saveCatalogAndNotify()">
-        💾 Salva Catalogo e Avvisa Clienti (Notifica Push)
-      </button>
-      <div id="status-msg"></div>
     </div>
   </div>
 
-  <!-- SEZIONE OFFERTE (Mantenuta semplice) -->
-  <div class="card">
-    <h2>🏷️ Offerte Rapide</h2>
-    <div class="form-group">
-      <label>Titolo Offerta</label>
-      <input type="text" id="offer-title" placeholder="Es. Sconto Cover">
+  <!-- Pulsante Salva Globale -->
+  <button onclick="saveAllChanges()" class="btn-success">
+    💾 SALVA CATALOGO E NOTIFICA CLIENTI
+  </button>
+  <p style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:10px;">
+    Cliccando qui sopra, le modifiche verranno salvate sul server e verrà inviata UNA SOLA notifica push a tutti i clienti.
+  </p>
+
+  <!-- Sezione Offerte -->
+  <div class="card" style="margin-top:30px;">
+    <h2>🔥 Gestione Offerte</h2>
+    <div id="offers-editor">
+      <input type="text" id="off-pct" placeholder="% o Sconto (es. -20%)">
+      <input type="text" id="off-title" placeholder="Titolo offerta">
+      <textarea id="off-desc" rows="2" placeholder="Descrizione"></textarea>
+      <input type="number" id="off-heat" placeholder="Livello calore (1-4)" min="1" max="4">
+      <button onclick="addOffer()" class="btn-primary" style="width:100%">Aggiungi Offerta</button>
     </div>
-    <div class="form-group">
-      <label>Percentuale/Sconto</label>
-      <input type="text" id="offer-pct" placeholder="Es. -20%">
-    </div>
-    <div class="form-group">
-      <label>Descrizione</label>
-      <textarea id="offer-desc" rows="2"></textarea>
-    </div>
-    <button class="btn btn-primary" onclick="addOffer()">Aggiungi Offerta</button>
-    <p style="font-size:0.8em; color:var(--text-dim); margin-top:5px;">*Le offerte si aggiornano in tempo reale sul sito (se supportato dal backend).</p>
+    <div id="offers-list" style="margin-top:20px;"></div>
+    <button onclick="saveOffers()" class="btn-gold" style="width:100%; margin-top:15px;">Salva Offerte (Notifica Inclusa)</button>
   </div>
 </div>
 
 <script>
   // --- STATO LOCALE ---
   let currentCategory = 'smartphone';
-  let catalogData = {
-    smartphone: [],
-    accessori: [],
-    ricambi: []
-  };
-
-  // --- INIZIALIZZAZIONE ---
-  window.addEventListener('DOMContentLoaded', async () => {
-    await loadCatalogFromServer();
-    renderList();
-  });
-
-  async function loadCatalogFromServer() {
+  let localCatalog = { smartphone: [], accessori: [], ricambi: [] };
+  let pendingChanges = false;
+  
+  // Caricamento iniziale dati
+  async function loadData() {
     try {
       const res = await fetch('/api/config');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.products) catalogData = data.products;
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      // Popola form negozio
+      document.getElementById('shop-name').value = data.shopName || '';
+      document.getElementById('shop-address').value = data.address || '';
+      document.getElementById('shop-phone').value = data.phone || '';
+      document.getElementById('shop-whatsapp').value = data.whatsapp || '';
+
+      // Popola catalogo locale
+      if (data.products) {
+        localCatalog = data.products;
+      } else {
+        // Fallback se vuoto
+        localCatalog = {
+          smartphone: [], accessori: [], ricambi: []
+        };
       }
+      renderProductList();
+      
+      // Popola offerte
+      if (data.offers) renderOffersList(data.offers);
     } catch (e) {
-      console.warn("Impossibile caricare config iniziale, uso memoria locale vuota.");
+      console.log("Impossibile caricare dati dal server (o server offline). Parto da zero.");
     }
   }
 
   // --- GESTIONE TAB ---
   function switchTab(cat) {
     currentCategory = cat;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
-    clearForm();
-    renderList();
+    document.getElementById('current-cat').textContent = cat;
+    renderProductList();
   }
 
-  // --- GESTIONE PRODOTTI (CRUD LOCALE) ---
-  function addOrUpdateProduct() {
-    const id = document.getElementById('prod-id').value;
-    const name = document.getElementById('prod-name').value;
-    const spec = document.getElementById('prod-spec').value;
-    const price = document.getElementById('prod-price').value;
-    const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-
-    if (!name || !price) { alert("Inserisci almeno Nome e Prezzo"); return; }
-
-    const newProd = { name, spec, price, stock, id: id ? parseInt(id) : Date.now() };
-
-    if (id) {
-      // Update
-      const index = catalogData[currentCategory].findIndex(p => p.id == id);
-      if (index !== -1) catalogData[currentCategory][index] = newProd;
-    } else {
-      // Create
-      catalogData[currentCategory].push(newProd);
-    }
-
-    clearForm();
-    renderList();
-  }
-
-  function editProduct(id) {
-    const prod = catalogData[currentCategory].find(p => p.id == id);
-    if (!prod) return;
-    document.getElementById('prod-id').value = prod.id;
-    document.getElementById('prod-name').value = prod.name;
-    document.getElementById('prod-spec').value = prod.spec;
-    document.getElementById('prod-price').value = prod.price;
-    document.getElementById('prod-stock').value = prod.stock;
-  }
-
-  function deleteProduct(id) {
-    if(!confirm("Eliminare questo prodotto dalla lista?")) return;
-    catalogData[currentCategory] = catalogData[currentCategory].filter(p => p.id != id);
-    renderList();
-  }
-
-  function clearForm() {
-    document.getElementById('prod-id').value = '';
-    document.getElementById('prod-name').value = '';
-    document.getElementById('prod-spec').value = '';
-    document.getElementById('prod-price').value = '';
-    document.getElementById('prod-stock').value = '4';
-  }
-
-  function renderList() {
-    const ul = document.getElementById('product-list-ul');
-    const count = document.getElementById('count-display');
-    ul.innerHTML = '';
+  // --- RENDER LISTA PRODOTTI ---
+  function renderProductList() {
+    const list = document.getElementById('product-list');
+    list.innerHTML = '';
+    const items = localCatalog[currentCategory] || [];
     
-    const list = catalogData[currentCategory];
-    count.textContent = list.length;
-
-    if (list.length === 0) {
-      ul.innerHTML = '<li style="padding:10px; color:var(--text-dim); text-align:center;">Nessun prodotto in questa categoria.</li>';
+    if (items.length === 0) {
+      list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-dim);">Nessun prodotto in questa categoria.</div>';
       return;
     }
 
-    list.forEach(p => {
-      const li = document.createElement('li');
-      li.className = 'product-item';
-      li.innerHTML = `
-        <div>
-          <strong>${p.name}</strong> <small style="color:var(--text-dim)">(${p.spec})</small><br>
-          <span style="color:var(--gold)">${p.price}</span> • Stock: ${p.stock}
+    items.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'product-item';
+      div.innerHTML = `
+        <div class="product-info">
+          <strong>${item.name}</strong><br>
+          <small style="color:var(--text-dim)">${item.spec} | ${item.price} | Stock: ${item.stock}</small>
         </div>
-        <div style="display:flex; gap:5px;">
-          <button class="btn btn-ghost" onclick="editProduct(${p.id})">✏️</button>
-          <button class="btn btn-danger" onclick="deleteProduct(${p.id})">🗑️</button>
+        <div class="product-actions">
+          <button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="removeProduct(${index})">Elimina</button>
         </div>
       `;
-      ul.appendChild(li);
+      list.appendChild(div);
     });
   }
 
-  // --- SALVATAGGIO GLOBALE E NOTIFICA (IL CUORE DELLA RICHIESTA) ---
-  async function saveCatalogAndNotify() {
-    const statusEl = document.getElementById('status-msg');
-    const btn = document.querySelector('.btn-success');
+  // --- AGGIUNGI/RIMUOVI PRODOTTO (LOCALE) ---
+  function addProduct() {
+    const name = document.getElementById('prod-name').value;
+    const spec = document.getElementById('prod-spec').value;
+    const price = document.getElementById('prod-price').value;
+    const stock = parseInt(document.getElementById('prod-stock').value) || 1;
+
+    if (!name) return alert("Inserisci almeno il nome");
+
+    if (!localCatalog[currentCategory]) localCatalog[currentCategory] = [];
     
+    localCatalog[currentCategory].push({ name, spec, price, stock });
+    
+    // Reset campi
+    document.getElementById('prod-name').value = '';
+    document.getElementById('prod-spec').value = '';
+    document.getElementById('prod-price').value = '';
+    document.getElementById('prod-stock').value = '';
+    
+    renderProductList();
+    markPendingChanges();
+  }
+
+  function removeProduct(index) {
+    if(confirm("Eliminare questo prodotto dalla lista temporanea?")) {
+      localCatalog[currentCategory].splice(index, 1);
+      renderProductList();
+      markPendingChanges();
+    }
+  }
+
+  function markPendingChanges() {
+    pendingChanges = true;
+    const badge = document.getElementById('pending-count');
+    const countVal = document.getElementById('count-val');
+    
+    // Calcolo semplice numero elementi totali
+    let total = 0;
+    Object.values(localCatalog).forEach(arr => total += arr.length);
+    
+    countVal.textContent = total;
+    badge.classList.remove('hidden');
+  }
+
+  // --- SALVATAGGIO GLOBALE (CON NOTIFICA) ---
+  async function saveAllChanges() {
+    if (!pendingChanges && !confirm("Nessuna modifica rilevata al catalogo. Vuoi forzare l'invio di una notifica di aggiornamento?")) {
+      return;
+    }
+
+    const btn = document.querySelector('.btn-success');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Salvataggio e invio notifiche...";
     btn.disabled = true;
-    btn.textContent = "⏳ Salvataggio e invio notifiche in corso...";
-    statusEl.className = '';
-    statusEl.textContent = '';
+
+    const payload = {
+      shopName: document.getElementById('shop-name').value,
+      address: document.getElementById('shop-address').value,
+      phone: document.getElementById('shop-phone').value,
+      whatsapp: document.getElementById('shop-whatsapp').value,
+      products: localCatalog,
+      sendNotification: true // Flag cruciale per il backend
+    };
 
     try {
-      // 1. Inviamo l'intero catalogo aggiornato al server
-      const response = await fetch('/api/config', {
+      const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: catalogData })
+        body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Errore salvataggio server");
-
-      // 2. Se il salvataggio è andato a buon fine, inviamo la notifica PUSH
-      // Questa chiamata triggera il backend a mandare una SOLA notifica a tutti gli iscritti
-      const notifyRes = await fetch('/api/notify-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: "Nuovo Catalogo Disponibile!", 
-          body: "Abbiamo aggiornato i prezzi e i prodotti. Scopri le novità nell'app.",
-          url: "/#catalogo"
-        })
-      });
-
-      if (!notifyRes.ok) throw new Error("Salvato ma errore invio notifiche");
-
-      statusEl.textContent = "✅ Catalogo salvato e notifica inviata a tutti i clienti!";
-      statusEl.className = "status-ok";
-
-    } catch (error) {
-      console.error(error);
-      statusEl.textContent = "❌ Errore: " + error.message;
-      statusEl.className = "status-err";
+      if (res.ok) {
+        alert("✅ Catalogo aggiornato e notifica inviata ai clienti!");
+        pendingChanges = false;
+        document.getElementById('pending-count').classList.add('hidden');
+      } else {
+        throw new Error("Errore server");
+      }
+    } catch (err) {
+      alert("❌ Errore durante il salvataggio: " + err.message);
     } finally {
+      btn.innerHTML = originalText;
       btn.disabled = false;
-      btn.textContent = "💾 Salva Catalogo e Avvisa Clienti (Notifica Push)";
     }
   }
 
   // --- GESTIONE OFFERTE (Semplificata) ---
-  async function addOffer() {
-    const title = document.getElementById('offer-title').value;
-    const pct = document.getElementById('offer-pct').value;
-    const desc = document.getElementById('offer-desc').value;
-    
-    if(!title) return alert("Inserisci un titolo");
+  let tempOffers = [];
+  
+  function renderOffersList(offers) {
+    tempOffers = offers || [];
+    const container = document.getElementById('offers-list');
+    container.innerHTML = tempOffers.map((o, i) => `
+      <div class="product-item">
+        <div><strong>${o.pct}</strong> ${o.title}</div>
+        <button class="btn-danger" style="padding:2px 6px;" onclick="removeOffer(${i})">X</button>
+      </div>
+    `).join('');
+  }
 
-    // Nota: Questo potrebbe sovrascrivere o aggiungere a seconda di come è fatto il tuo backend '/api/offers'
-    // Assumiamo che il backend gestisca l'append o l'update.
+  function addOffer() {
+    const pct = document.getElementById('off-pct').value;
+    const title = document.getElementById('off-title').value;
+    const desc = document.getElementById('off-desc').value;
+    const heat = parseInt(document.getElementById('off-heat').value) || 1;
+
+    if(!title) return alert("Titolo richiesto");
+
+    tempOffers.push({ pct, title, desc, heat });
+    renderOffersList(tempOffers);
+    
+    // Clear inputs
+    document.getElementById('off-pct').value = '';
+    document.getElementById('off-title').value = '';
+    document.getElementById('off-desc').value = '';
+  }
+
+  function removeOffer(i) {
+    tempOffers.splice(i, 1);
+    renderOffersList(tempOffers);
+  }
+
+  async function saveOffers() {
+    const btn = event.target;
+    btn.textContent = "⏳ Salvataggio...";
+    
     try {
       await fetch('/api/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, pct, desc, heat: 3 })
+        body: JSON.stringify(tempOffers)
       });
-      alert("Offerta aggiunta/aggiornata!");
-      document.getElementById('offer-title').value = '';
-      document.getElementById('offer-pct').value = '';
-      document.getElementById('offer-desc').value = '';
+      alert("Offerte salvate e notifica inviata!");
     } catch(e) {
-      alert("Errore nel salvare l'offerta");
+      alert("Errore salvataggio offerte");
     }
+    btn.textContent = "Salva Offerte (Notifica Inclusa)";
   }
+
+  // --- SAVE CONFIG NEGOZIO (Senza notifica) ---
+  document.getElementById('shop-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // Salviamo solo i dati anagrafici, senza inviare notifiche push
+    const payload = {
+      shopName: document.getElementById('shop-name').value,
+      address: document.getElementById('shop-address').value,
+      phone: document.getElementById('shop-phone').value,
+      whatsapp: document.getElementById('shop-whatsapp').value
+    };
+    
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert("Dati negozio aggiornati (nessuna notifica inviata).");
+    } catch(err) {
+      alert("Errore aggiornamento dati negozio.");
+    }
+  });
+
+  // Init
+  loadData();
 </script>
 </body>
 </html>
