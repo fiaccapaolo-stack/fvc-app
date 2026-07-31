@@ -42,7 +42,7 @@
   }
   a{color:inherit;}
 
-  /* ---- status bar decorativa: richiamo giocoso al telefono, non funzionale ---- */
+  /* ---- status bar decorativa ---- */
   .statusbar{
     display:flex;
     align-items:center;
@@ -102,7 +102,7 @@
     margin:0 0 26px;
   }
 
-  /* ---- griglia rapida stile home screen ---- */
+  /* ---- griglia rapida ---- */
   .quicktiles{
     display:grid;
     grid-template-columns:repeat(2, 1fr);
@@ -436,12 +436,7 @@
       </span>
       <span class="label">Telefonia &amp; Fibra</span>
     </a>
-    <a class="tile" href="#rate">
-      <span class="glyph">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#D4AF37" stroke-width="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5" stroke="#D4AF37" stroke-width="1.5"/><line x1="6.5" y1="14" x2="11" y2="14" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </span>
-      <span class="label">Acquista a rate</span>
-    </a>
+    <!-- RIMOSSO TILE RATE -->
     <a class="tile" href="#negozio">
       <span class="glyph">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#D4AF37" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.2" stroke="#D4AF37" stroke-width="1.6"/></svg>
@@ -508,28 +503,6 @@
   </div>
 
   <div id="carrier-plans"></div>
-</section>
-
-<!-- ===================== ACQUISTA A RATE ===================== -->
-<section id="rate">
-  <div class="section-head">
-    <div>
-      <p class="eyebrow">Finanziamenti a tasso zero</p>
-      <h3>Acquista a rate</h3>
-    </div>
-  </div>
-  <p style="color:var(--text-dim); font-size:13px; margin:-8px 0 18px;">Rateizza il tuo nuovo telefono direttamente con il gestore, senza finanziarie esterne.</p>
-
-  <div class="tabs" id="installment-tabs">
-    <button class="tab active" data-carrier="tim">TIM</button>
-    <button class="tab" data-carrier="wind">WindTre</button>
-    <button class="tab" data-carrier="sky">Sky</button>
-    <button class="tab" data-carrier="lyca">Lycamobile</button>
-    <button class="tab" data-carrier="very">VeryMobile</button>
-    <button class="tab" data-carrier="kena">Kena</button>
-  </div>
-
-  <div id="installment-plans"></div>
 </section>
 
 <!-- ===================== NEGOZIO ===================== -->
@@ -612,10 +585,7 @@
   tick();
   setInterval(tick, 15000);
 
-  // ---- contenuti del negozio (nome, indirizzo, contatti, orari, catalogo):
-  // caricati dal server, modificabili dal pannello admin.html.
-  // Se il server non risponde, restano i valori di esempio gia' scritti
-  // nell'HTML, cosi' la pagina non appare mai vuota. ----
+  // ---- contenuti del negozio ----
   let CATALOG = {
     smartphone: [
       { name:'iPhone 15', spec:'128GB · Nero', price:'799€', stock:4 },
@@ -721,47 +691,7 @@
     renderCarrierPlans(btn.dataset.carrier);
   });
 
-  // ---- acquista a rate: stesso schema dei piani gestore ----
-  let INSTALLMENTS = {
-    tim: [{ name: 'iPhone 15 a rate con TIM', price: '24 rate da 33,29€/mese', details: 'TAN 0% TAEG 0%, nessuna spesa aggiuntiva' }],
-    wind: [{ name: 'Galaxy S24 a rate con WindTre', price: '30 rate da 25,90€/mese', details: 'Anticipo 0€, TAN 0% TAEG 0%' }],
-    sky: [], lyca: [], very: [], kena: [],
-  };
-
-  function renderInstallmentPlans(carrier){
-    const wrap = document.getElementById('installment-plans');
-    const plans = INSTALLMENTS[carrier] || [];
-    if (plans.length === 0){
-      wrap.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna rateizzazione disponibile al momento per questo gestore.</p>';
-      return;
-    }
-    wrap.innerHTML = plans.map(p => {
-      if (p.isPhoto) {
-        return `<div class="plan plan-photo"><img src="${p.image}" alt="Rateizzazione ${carrier}"></div>`;
-      }
-      return `
-      <div class="plan">
-        <div class="row">
-          ${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
-          <div style="flex:1;">
-            <h4>${p.name}</h4>
-            <p>${p.details || ''}</p>
-          </div>
-          <span class="price">${p.price}</span>
-        </div>
-      </div>
-    `;
-    }).join('');
-  }
-  renderInstallmentPlans('tim');
-
-  document.getElementById('installment-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.tab');
-    if (!btn) return;
-    document.querySelectorAll('#installment-tabs .tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    renderInstallmentPlans(btn.dataset.carrier);
-  });
+  // RIMOSSA SEZIONE INSTALLMENTS (RATE)
 
   function applyShopConfig(cfg){
     if (!cfg) return;
@@ -805,19 +735,13 @@
       renderCarrierPlans(activeCarrierTab ? activeCarrierTab.dataset.carrier : 'tim');
     }
 
-    if (cfg.installments) {
-      INSTALLMENTS = cfg.installments;
-      const activeInstallmentTab = document.querySelector('#installment-tabs .tab.active');
-      renderInstallmentPlans(activeInstallmentTab ? activeInstallmentTab.dataset.carrier : 'tim');
-    }
+    // RIMOSSO AGGIORNAMENTO INSTALLMENTS
   }
 
   fetch('/api/config').then(r => r.ok ? r.json() : Promise.reject()).then(applyShopConfig).catch(() => {});
 
 
-  // ---- offerte: caricate dal server (server/data/offers.json).
-  // Se il server non risponde (es. app aperta come semplice file statico),
-  // mostriamo comunque un set di esempio cosi' la sezione non resta vuota. ----
+  // ---- offerte ----
   const FALLBACK_OFFERS = [
     { pct:'-15%', title:'Cover e vetri protettivi', desc:'Su tutta la selezione accessori, fino a fine mese.', heat:3 },
     { pct:'−80€', title:'Permuta il tuo usato', desc:'Valutazione gratuita, sconto immediato sul nuovo acquisto.', heat:2 },
@@ -845,10 +769,7 @@
     .then(renderOffers)
     .catch(() => renderOffers(FALLBACK_OFFERS));
 
-  // ---- notifiche push in tempo reale ----
-  // Il permesso lo chiede il browser, ma l'iscrizione vera e propria viene
-  // registrata sul server: e' li' che sapremo a chi mandare le notifiche
-  // quando aggiungerai una nuova offerta.
+  // ---- notifiche push ----
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -859,7 +780,6 @@
   const notifyBtn = document.getElementById('notify-btn');
 
   function setNotifyState(state){
-    // state: 'idle' | 'active' | 'blocked' | 'unsupported' | 'error'
     if (state === 'unsupported'){ notifyBtn.textContent='Non supportato'; notifyBtn.disabled=true; }
     else if (state === 'active'){ notifyBtn.textContent='Attive ✓'; notifyBtn.disabled=true; }
     else if (state === 'blocked'){ notifyBtn.textContent='Bloccate'; notifyBtn.disabled=true; }
@@ -876,10 +796,6 @@
       const reg = await navigator.serviceWorker.ready;
       let existing = await reg.pushManager.getSubscription();
       if (existing) {
-        // Controlliamo che la chiave di sicurezza con cui e' stata creata
-        // l'iscrizione corrisponda ancora a quella attuale del server. Se il
-        // server ha generato nuove chiavi nel frattempo, l'iscrizione vecchia
-        // non funzionerebbe piu': la rifacciamo da zero, in automatico.
         try {
           const { publicKey } = await fetch('/api/vapid-public-key').then(r => r.json());
           const currentKey = urlBase64ToUint8Array(publicKey);
@@ -893,8 +809,6 @@
           }
         } catch (e) { /* se il controllo fallisce, si prova comunque a registrare quella esistente */ }
 
-        // Ri-registriamo comunque sul server ad ogni apertura, in silenzio,
-        // cosi' un eventuale disallineamento lato server si corregge da solo.
         try {
           await fetch('/api/subscribe', {
             method: 'POST',
@@ -946,7 +860,7 @@
     });
   }
 
-  // ---- prompt di installazione personalizzato ----
+  // ---- prompt di installazione ----
   let deferredPrompt;
   const installBar = document.getElementById('install-bar');
   window.addEventListener('beforeinstallprompt', (e) => {
@@ -968,7 +882,7 @@
     installBar.classList.remove('show');
   });
 
-  // ---- iPhone/iPad: niente prompt automatico, mostriamo istruzioni manuali ----
+  // ---- iPhone/iPad: istruzioni manuali ----
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const iosBar = document.getElementById('ios-install-bar');
