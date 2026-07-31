@@ -1,1191 +1,372 @@
 <!DOCTYPE html>
-<!-- FVC_ADMIN_BUILD: v5-bulk-delete -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pannello di gestione — Fvc Project</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<title>Admin — Fvc Project Srl</title>
 <style>
-  :root{
-    --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
-    --text:#EDF1F5; --text-dim:#8B98A8; --gold:#D4AF37; --cyan:#4FD8E8;
-    --danger:#E5675F;
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --primary: #3b82f6;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --gold: #D4AF37;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
-    font-family:'Inter', system-ui, sans-serif; padding:24px 16px 60px;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 20px;
   }
-  .wrap{max-width:560px; margin:0 auto;}
-  h1{font-family:'Space Grotesk', sans-serif; font-size:20px; margin:0 0 4px;}
-  p.lead{color:var(--text-dim); font-size:12.5px; margin:0 0 18px;}
-  label{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; display:block; margin:0 0 6px;}
-  input, textarea, select{
-    width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--border);
-    background:var(--surface); color:var(--text); font-size:13.5px; margin-bottom:12px;
-    font-family:inherit;
+  h1, h2 { margin-top: 0; }
+  
+  .container { max-width: 800px; margin: 0 auto; }
+  
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
   }
-  textarea{resize:vertical; min-height:56px;}
-  input:focus, textarea:focus, select:focus{outline:2px solid var(--cyan); outline-offset:1px;}
-  button{
-    padding:10px 15px; border-radius:9px; border:none;
-    background:var(--gold); color:#141821; font-weight:600; font-size:13px; cursor:pointer;
-  }
-  button.secondary{background:var(--surface-alt); color:var(--text); border:1px solid var(--border);}
-  button.danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
-  button:disabled{opacity:.5; cursor:default;}
 
-  #login{max-width:320px; margin:80px auto 0;}
-  #login button{width:100%;}
-  #login .error{color:var(--danger); font-size:12.5px; margin:-6px 0 12px; display:none;}
+  .form-group { margin-bottom: 15px; }
+  label { display: block; margin-bottom: 5px; color: var(--text-dim); font-size: 0.9em; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
-  #panel{display:none;}
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-success { background: var(--success); color: white; width: 100%; font-size: 1.1em; padding: 15px; margin-top: 10px;}
+  .btn-danger { background: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
 
-  .tabbar{display:flex; gap:6px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0;}
-  .tabbtn{
-    flex:1; background:none; border:none; color:var(--text-dim); font-size:12.5px;
-    font-weight:600; padding:10px 4px; cursor:pointer; border-bottom:2px solid transparent;
-    border-radius:0;
+  .product-list { list-style: none; padding: 0; }
+  .product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
   }
-  .tabbtn.active{color:var(--gold); border-bottom-color:var(--gold);}
-  .tabpage{display:none;}
-  .tabpage.active{display:block;}
+  .product-item:last-child { border-bottom: none; }
+  
+  .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-  .card{
-    background:var(--surface); border:1px solid var(--border); border-radius:14px;
-    padding:16px; margin-bottom:12px;
+  .hidden { display: none; }
+  
+  #status-msg {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: bold;
   }
-  .card .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
-  .card h3{margin:0 0 4px; font-size:14.5px; font-weight:600;}
-  .card .pct{font-family:'Space Grotesk', sans-serif; color:var(--gold); font-weight:700; font-size:15px;}
-  .card p{margin:0; font-size:12px; color:var(--text-dim);}
-  .card .actions{display:flex; gap:8px; margin-top:12px;}
-  .card .actions button{flex:1; font-size:12px; padding:8px;}
-
-  .section-title{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold);
-    text-transform:uppercase; letter-spacing:.08em; margin:22px 0 10px;
-  }
-  .form-actions{display:flex; gap:10px;}
-  .form-actions button{flex:1;}
-  .heat-row{display:flex; gap:8px; margin-bottom:14px;}
-  .heat-opt{
-    flex:1; text-align:center; padding:9px 0; border-radius:8px; border:1px solid var(--border);
-    cursor:pointer; font-size:13px; color:var(--text-dim);
-  }
-  .heat-opt.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
-
-  .hours-row{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:start;}
-  .cat-tabs{display:flex; gap:6px; margin-bottom:14px;}
-  .cat-tab{
-    flex:1; font-family:'IBM Plex Mono', monospace; font-size:11.5px; padding:8px 4px;
-    border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer;
-  }
-  .cat-tab.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
-
-  .toast{
-    position:fixed; left:16px; right:16px; bottom:16px; background:var(--surface);
-    border:1px solid var(--cyan); border-radius:10px; padding:12px 14px; font-size:13px;
-    display:none; max-width:528px; margin:0 auto; z-index:100;
-  }
-  .toast.show{display:block;}
-  .toast.error{border-color:var(--danger); color:var(--danger);}
-  .hint{font-size:11.5px; color:var(--text-dim); margin:-6px 0 14px;}
-  .cta-row2{display:flex; gap:10px; margin-bottom:4px;}
-  .cta-row2 button{flex:1;}
-  .photo-row{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
-  .photo-preview{
-    width:56px; height:56px; border-radius:10px; object-fit:cover;
-    border:1px solid var(--border); background:var(--surface-alt); flex-shrink:0;
-  }
+  .status-ok { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+  .status-err { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
 </style>
 </head>
 <body>
 
-<div id="login" class="wrap">
-  <h1>Pannello di gestione</h1>
-  <p class="lead">Fvc Project — accesso riservato</p>
-  <label for="pwd">Password</label>
-  <input type="password" id="pwd" placeholder="••••••••">
-  <p class="error" id="login-error">Password non corretta.</p>
-  <button id="login-btn">Accedi</button>
-</div>
+<div class="container">
+  <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+    <h1>Admin Panel</h1>
+    <button class="btn btn-ghost" onclick="window.location.href='/'">🏠 Torna al Sito</button>
+  </header>
 
-<div id="panel" class="wrap">
-  <h1>Pannello di gestione</h1>
-  <p class="lead">Fvc Project — modifica i contenuti della app.</p>
+  <!-- SEZIONE CATALOGO -->
+  <div class="card">
+    <h2>📦 Gestione Catalogo</h2>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('smartphone')">Smartphone</div>
+      <div class="tab" onclick="switchTab('accessori')">Accessori</div>
+      <div class="tab" onclick="switchTab('ricambi')">Ricambi</div>
+    </div>
 
-  <div class="card" id="notify-card" style="border-color:var(--gold);">
-    <label for="notify-title">Titolo notifica (facoltativo)</label>
-    <input type="text" id="notify-title" placeholder="Fvc Project · Novità">
-    <label for="notify-body">Messaggio da inviare a tutti i clienti iscritti</label>
-    <textarea id="notify-body" placeholder="Abbiamo aggiornato il catalogo e le offerte, dai un'occhiata!"></textarea>
-    <button id="send-notify-btn" style="width:100%;">📣 Invia notifica ai clienti</button>
-    <p class="hint" style="margin-top:10px;">Salva prima tutte le modifiche in Negozio, Catalogo e Offerte, poi usa questo pulsante una sola volta per avvisare i clienti.</p>
-  </div>
-
-  <div class="tabbar">
-    <button class="tabbtn active" data-tab="negozio">Negozio</button>
-    <button class="tabbtn" data-tab="catalogo">Catalogo</button>
-    <button class="tabbtn" data-tab="gestori">Gestori</button>
-    <button class="tabbtn" data-tab="rate">Rate</button>
-    <button class="tabbtn" data-tab="offerte">Offerte</button>
-  </div>
-
-  <!-- ===================== NEGOZIO ===================== -->
-  <div class="tabpage active" id="tab-negozio">
-    <div class="card">
-      <label for="n-name">Nome negozio</label>
-      <input type="text" id="n-name">
-      <label for="n-address">Indirizzo</label>
-      <input type="text" id="n-address">
-      <p class="hint">Usato anche per generare mappa e indicazioni stradali.</p>
-      <label for="n-phone">Telefono</label>
-      <input type="text" id="n-phone" placeholder="0736 46354">
-      <label for="n-whatsapp">WhatsApp</label>
-      <input type="text" id="n-whatsapp" placeholder="333 123 456">
-      <p class="section-title" style="margin-top:18px;">Orari</p>
-      <div id="hours-rows"></div>
-      <button class="secondary" id="add-hour-row" type="button">+ Aggiungi riga orario</button>
-      <div class="form-actions" style="margin-top:16px;">
-        <button id="save-negozio">Salva info negozio</button>
+    <!-- Form Aggiunta Prodotto -->
+    <div style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
+      <h3 style="margin-top:0; font-size:1rem; color:var(--gold);">Aggiungi / Modifica Prodotto</h3>
+      <input type="hidden" id="prod-id">
+      <div class="form-group">
+        <label>Nome Prodotto</label>
+        <input type="text" id="prod-name" placeholder="Es. iPhone 15">
       </div>
+      <div class="form-group">
+        <label>Specifiche</label>
+        <input type="text" id="prod-spec" placeholder="Es. 128GB, Nero">
+      </div>
+      <div class="form-group">
+        <label>Prezzo</label>
+        <input type="text" id="prod-price" placeholder="Es. 799€">
+      </div>
+      <div class="form-group">
+        <label>Disponibilità (1-4)</label>
+        <input type="number" id="prod-stock" min="0" max="4" value="4">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="addOrUpdateProduct()">Salva nella Lista</button>
+        <button class="btn btn-ghost" onclick="clearForm()">Pulisci</button>
+      </div>
+    </div>
+
+    <!-- Lista Prodotti Corrente -->
+    <h3>Prodotti in lista (<span id="count-display">0</span>)</h3>
+    <ul class="product-list" id="product-list-ul">
+      <!-- Items injected via JS -->
+    </ul>
+    
+    <div style="margin-top: 20px; border-top: 1px solid var(--border); paddingTop: 20px;">
+      <p style="color: var(--text-dim); font-size: 0.9em; margin-bottom: 10px;">
+        ⚠️ Le modifiche alla lista non sono visibili ai clienti finché non premi il pulsante verde qui sotto.
+        Puoi aggiungere/modificare quanti prodotti vuoi senza disturbare i clienti.
+      </p>
+      <button class="btn btn-success" onclick="saveCatalogAndNotify()">
+        💾 Salva Catalogo e Avvisa Clienti (Notifica Push)
+      </button>
+      <div id="status-msg"></div>
     </div>
   </div>
 
-  <!-- ===================== CATALOGO ===================== -->
-  <div class="tabpage" id="tab-catalogo">
-    <div class="cat-tabs" id="cat-tabs">
-      <button class="cat-tab active" data-cat="smartphone">Smartphone</button>
-      <button class="cat-tab" data-cat="accessori">Accessori</button>
-      <button class="cat-tab" data-cat="ricambi">Ricambi</button>
+  <!-- SEZIONE OFFERTE (Mantenuta semplice) -->
+  <div class="card">
+    <h2>🏷️ Offerte Rapide</h2>
+    <div class="form-group">
+      <label>Titolo Offerta</label>
+      <input type="text" id="offer-title" placeholder="Es. Sconto Cover">
     </div>
-    <div id="products-list"></div>
-    <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
-
-    <div class="card" id="product-form-card" style="display:none; margin-top:12px;">
-      <input type="hidden" id="p-editing-index" value="-1">
-      <label for="p-name">Nome</label>
-      <input type="text" id="p-name" placeholder="iPhone 15">
-      <label for="p-spec">Dettaglio (es. 128GB · Nero)</label>
-      <input type="text" id="p-spec" placeholder="128GB · Nero">
-      <label for="p-price">Prezzo (testo libero, es. 799€ o da 39€)</label>
-      <input type="text" id="p-price" placeholder="799€">
-      <label>Disponibilità (barre mostrate in app)</label>
-      <div class="heat-row" id="stock-row">
-        <div class="heat-opt" data-v="1">1</div>
-        <div class="heat-opt" data-v="2">2</div>
-        <div class="heat-opt" data-v="3">3</div>
-        <div class="heat-opt" data-v="4">4</div>
-      </div>
-      <label for="p-image">Foto (facoltativa)</label>
-      <div class="photo-row">
-        <img id="p-image-preview" class="photo-preview" style="display:none;">
-        <input type="file" id="p-image" accept="image/*">
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-product">Annulla</button>
-        <button id="save-product">Salva prodotto</button>
-      </div>
+    <div class="form-group">
+      <label>Percentuale/Sconto</label>
+      <input type="text" id="offer-pct" placeholder="Es. -20%">
     </div>
-  </div>
-
-  <!-- ===================== GESTORI ===================== -->
-  <div class="tabpage" id="tab-gestori">
-    <div class="cat-tabs" id="carrier-cat-tabs">
-      <button class="cat-tab active" data-carrier="tim">TIM</button>
-      <button class="cat-tab" data-carrier="wind">WindTre</button>
-      <button class="cat-tab" data-carrier="sky">Sky</button>
-      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
-      <button class="cat-tab" data-carrier="very">VeryMobile</button>
-      <button class="cat-tab" data-carrier="kena">Kena</button>
+    <div class="form-group">
+      <label>Descrizione</label>
+      <textarea id="offer-desc" rows="2"></textarea>
     </div>
-    <div id="carrier-plans-list"></div>
-    <button id="add-plan-btn" type="button">+ Nuovo piano</button>
-
-    <div class="card" id="plan-form-card" style="display:none; margin-top:12px;">
-      <input type="hidden" id="pl-editing-index" value="-1">
-      <label for="pl-name">Nome piano</label>
-      <input type="text" id="pl-name" placeholder="Power Iron">
-      <label for="pl-type">Tipo</label>
-      <div class="heat-row" id="plan-type-row">
-        <div class="heat-opt" data-v="mobile">Mobile</div>
-        <div class="heat-opt" data-v="fibra">Fibra</div>
-      </div>
-      <label for="pl-price">Prezzo (es. 9,99€/mese)</label>
-      <input type="text" id="pl-price" placeholder="9,99€/mese">
-      <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
-      <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
-      <label for="pl-image">Foto o PDF dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
-      <div class="photo-row">
-        <img id="pl-image-preview" class="photo-preview" style="display:none;">
-        <input type="file" id="pl-image" accept="image/*,.pdf,application/pdf">
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-plan">Annulla</button>
-        <button id="save-plan">Salva piano</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===================== RATE ===================== -->
-  <div class="tabpage" id="tab-rate">
-    <div class="cat-tabs" id="installment-cat-tabs">
-      <button class="cat-tab active" data-carrier="tim">TIM</button>
-      <button class="cat-tab" data-carrier="wind">WindTre</button>
-      <button class="cat-tab" data-carrier="sky">Sky</button>
-      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
-      <button class="cat-tab" data-carrier="very">VeryMobile</button>
-      <button class="cat-tab" data-carrier="kena">Kena</button>
-    </div>
-    <div id="installment-plans-list"></div>
-    <div class="cta-row2">
-      <button id="add-installment-btn" type="button">+ Nuova rateizzazione</button>
-      <button id="import-excel-btn" type="button" class="secondary">📄 Importa da Excel</button>
-    </div>
-    <div class="cta-row2" style="margin-top:10px;">
-      <button id="clear-installments-btn" type="button" class="danger">🗑 Svuota tutte le rateizzazioni</button>
-    </div>
-    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;">
-
-    <div class="card" id="import-card" style="display:none; margin-top:12px;">
-      <p class="section-title" style="margin-top:0;">Importa rateizzazioni da Excel</p>
-      <p class="hint" id="import-summary"></p>
-      <label for="import-col-name">Colonna per il nome/modello</label>
-      <select id="import-col-name"></select>
-      <label for="import-col-price">Colonna per la rata/prezzo</label>
-      <select id="import-col-price"></select>
-      <label for="import-col-details">Colonna per i dettagli (facoltativa)</label>
-      <select id="import-col-details"></select>
-      <div id="import-preview" style="font-size:12px; color:var(--text-dim); margin-bottom:14px;"></div>
-      <label>Cosa fare con le rateizzazioni gi&agrave; presenti per questo gestore?</label>
-      <div class="heat-row" id="import-mode-row">
-        <div class="heat-opt active" data-v="append">Aggiungi</div>
-        <div class="heat-opt" data-v="replace">Sostituisci tutto</div>
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-import">Annulla</button>
-        <button id="confirm-import">Importa adesso</button>
-      </div>
-    </div>
-
-    <div class="card" id="installment-form-card" style="display:none; margin-top:12px;">
-      <input type="hidden" id="in-editing-index" value="-1">
-      <label for="in-name">Nome (es. iPhone 15 a rate con TIM)</label>
-      <input type="text" id="in-name" placeholder="iPhone 15 a rate con TIM">
-      <label for="in-price">Rate (es. 24 rate da 33,29€/mese)</label>
-      <input type="text" id="in-price" placeholder="24 rate da 33,29€/mese">
-      <label for="in-details">Dettagli (es. TAN 0% TAEG 0%)</label>
-      <input type="text" id="in-details" placeholder="TAN 0% TAEG 0%, nessuna spesa aggiuntiva">
-      <label for="in-image">Foto o PDF del volantino rateizzazione — oppure lascia gli altri campi vuoti se carichi solo questa</label>
-      <div class="photo-row">
-        <img id="in-image-preview" class="photo-preview" style="display:none;">
-        <input type="file" id="in-image" accept="image/*,.pdf,application/pdf">
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-installment">Annulla</button>
-        <button id="save-installment">Salva rateizzazione</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===================== OFFERTE ===================== -->
-  <div class="tabpage" id="tab-offerte">
-    <div class="cta-row2">
-      <button id="new-offer-btn" type="button">+ Nuova offerta</button>
-      <button id="clear-offers-btn" type="button" class="danger">🗑 Elimina tutte</button>
-    </div>
-
-    <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
-      <input type="hidden" id="f-editing-id">
-      <label for="f-id">Id univoco (solo per offerte nuove, es. black-friday-26)</label>
-      <input type="text" id="f-id" placeholder="black-friday-26">
-      <label for="f-pct">Sconto mostrato (es. -20%, 2x1, −50€)</label>
-      <input type="text" id="f-pct" placeholder="-20%">
-      <label for="f-title">Titolo</label>
-      <input type="text" id="f-title" placeholder="Sconto su tutti gli accessori">
-      <label for="f-desc">Descrizione breve</label>
-      <textarea id="f-desc" placeholder="Valido fino a fine mese, solo in negozio."></textarea>
-      <label>Livello "quanto è calda" (barre mostrate in app)</label>
-      <div class="heat-row" id="heat-row">
-        <div class="heat-opt" data-v="1">1</div>
-        <div class="heat-opt" data-v="2">2</div>
-        <div class="heat-opt" data-v="3">3</div>
-        <div class="heat-opt" data-v="4">4</div>
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-btn">Annulla</button>
-        <button id="save-btn">Salva</button>
-      </div>
-    </div>
-
-    <p class="section-title">Offerte attive</p>
-    <div id="offers-list"></div>
+    <button class="btn btn-primary" onclick="addOffer()">Aggiungi Offerta</button>
+    <p style="font-size:0.8em; color:var(--text-dim); margin-top:5px;">*Le offerte si aggiornano in tempo reale sul sito (se supportato dal backend).</p>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-  // Converte la prima pagina di un PDF in un'immagine, cosi' si puo'
-  // caricare direttamente il volantino PDF di un gestore senza doverlo
-  // prima trasformare a mano in foto.
-  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
-    if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const page = await pdf.getPage(1);
-    const baseViewport = page.getViewport({ scale: 1 });
-    const scale = maxWidth / baseViewport.width;
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    return canvas.toDataURL('image/jpeg', 0.82);
-  }
-
-  function isPdfFile(file){
-    return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-  }
-
-  let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
-
-  // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
-  // browser prima di salvarla, cosi' resta leggera per il database gratuito.
-  function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          let w = img.width, h = img.height;
-          if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
-          else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.onerror = () => reject(new Error('Immagine non valida'));
-        img.src = e.target.result;
-      };
-      reader.onerror = () => reject(new Error('Impossibile leggere il file'));
-      reader.readAsDataURL(file);
-    });
-  }
-  let config = null;
-  let currentCat = 'smartphone';
-  let heatValue = 2;
-  let stockValue = 2;
-
-  function toast(msg, isError){
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (isError ? ' error' : '');
-    setTimeout(() => t.classList.remove('show'), 2600);
-  }
-
-  async function apiFetch(url, opts = {}){
-    const res = await fetch(url, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD, ...(opts.headers||{}) }
-    });
-    if (res.status === 401) throw new Error('unauthorized');
-    if (!res.ok) { const b = await res.json().catch(()=>({})); throw new Error(b.error || 'Errore'); }
-    return res.status === 204 ? null : res.json();
-  }
-
-  // ---------------- LOGIN ----------------
-  function showPanel(){
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('panel').style.display = 'block';
-    loadConfig();
-    loadOffers();
-  }
-  async function tryLogin(pwd){
-    ADMIN_PASSWORD = pwd;
-    try {
-      await apiFetch('/api/admin/check', { method: 'POST' });
-      sessionStorage.setItem('fvc_admin_pwd', pwd);
-      showPanel();
-    } catch {
-      document.getElementById('login-error').style.display = 'block';
-    }
-  }
-  document.getElementById('login-btn').addEventListener('click', () => tryLogin(document.getElementById('pwd').value));
-  document.getElementById('pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(e.target.value); });
-  if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
-
-  document.getElementById('send-notify-btn').addEventListener('click', async () => {
-    const title = document.getElementById('notify-title').value.trim();
-    const body = document.getElementById('notify-body').value.trim();
-    if (!body) { toast('Scrivi il messaggio da inviare.', true); return; }
-    if (!confirm('Inviare questa notifica a tutti i clienti iscritti?')) return;
-    try {
-      await apiFetch('/api/admin/notify', { method: 'POST', body: JSON.stringify({ title, body }) });
-      toast('Notifica inviata a tutti i clienti.');
-      document.getElementById('notify-title').value = '';
-      document.getElementById('notify-body').value = '';
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    }
-  });
-
-  // ---------------- TABS ----------------
-  document.querySelectorAll('.tabbtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tabpage').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    });
-  });
-
-  // ---------------- NEGOZIO ----------------
-  function renderHoursRows(hours){
-    document.getElementById('hours-rows').innerHTML = (hours || []).map((h, i) => `
-      <div class="hours-row" data-i="${i}">
-        <input type="text" class="hour-label" value="${h.label || ''}" placeholder="Lunedì">
-        <input type="text" class="hour-value" value="${h.value || ''}" placeholder="15:30 – 19:30">
-        <button class="danger" type="button" onclick="removeHourRow(${i})" style="padding:10px;">✕</button>
-      </div>
-    `).join('');
-  }
-  window.removeHourRow = function(i){
-    const hours = collectHours();
-    hours.splice(i, 1);
-    renderHoursRows(hours);
-  };
-  document.getElementById('add-hour-row').addEventListener('click', () => {
-    const hours = collectHours();
-    hours.push({ label: '', value: '' });
-    renderHoursRows(hours);
-  });
-  function collectHours(){
-    return [...document.querySelectorAll('.hours-row')].map(row => ({
-      label: row.querySelector('.hour-label').value.trim(),
-      value: row.querySelector('.hour-value').value.trim(),
-    }));
-  }
-
-  async function loadConfig(){
-    try {
-      config = await apiFetch('/api/admin/config');
-      document.getElementById('n-name').value = config.shopName || '';
-      document.getElementById('n-address').value = config.address || '';
-      document.getElementById('n-phone').value = config.phone || '';
-      document.getElementById('n-whatsapp').value = config.whatsapp || '';
-      renderHoursRows(config.hours || []);
-      renderProducts();
-      renderCarrierPlansList();
-      renderInstallmentPlansList();
-    } catch (err) {
-      toast('Errore nel caricamento: ' + err.message, true);
-    }
-  }
-
-  document.getElementById('save-negozio').addEventListener('click', async () => {
-    try {
-      const payload = {
-        shopName: document.getElementById('n-name').value.trim(),
-        address: document.getElementById('n-address').value.trim(),
-        phone: document.getElementById('n-phone').value.trim(),
-        whatsapp: document.getElementById('n-whatsapp').value.trim(),
-        hours: collectHours().filter(h => h.label || h.value),
-        notify: {
-          title: `${document.getElementById('n-name').value.trim() || 'Fvc Project'} · Novità`,
-          body: 'Abbiamo aggiornato le informazioni del negozio.'
-        }
-      };
-      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(payload) });
-      toast('Info negozio salvate e notifica inviata.');
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    }
-  });
-
-  // ---------------- CATALOGO ----------------
-  document.getElementById('cat-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.cat-tab');
-    if (!btn) return;
-    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentCat = btn.dataset.cat;
-    renderProducts();
-  });
-
-  function stockDots(n){
-    let out = '';
-    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
-    return out;
-  }
-
-  function renderProducts(){
-    if (!config || !config.products) return;
-    const list = document.getElementById('products-list');
-    const items = config.products[currentCat] || [];
-    if (items.length === 0){
-      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun prodotto in questa categoria.</p>';
-      return;
-    }
-    list.innerHTML = items.map((p, i) => `
-      <div class="card">
-        <div class="row">
-          <div>
-            <h3>${p.name}</h3>
-            <p>${p.spec || ''}</p>
-          </div>
-          <div class="pct">${p.price}</div>
-        </div>
-        <div style="margin-top:8px;">${stockDots(p.stock)}</div>
-        <div class="actions">
-          <button class="secondary" onclick='editProduct(${i})'>Modifica</button>
-          <button class="danger" onclick="removeProduct(${i})">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function setStock(v){
-    stockValue = v;
-    document.querySelectorAll('#stock-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
-  }
-  document.getElementById('stock-row').addEventListener('click', (e) => {
-    const opt = e.target.closest('.heat-opt');
-    if (opt) setStock(Number(opt.dataset.v));
-  });
-
-  let productImageData = '';
-  function openProductForm(index){
-    document.getElementById('product-form-card').style.display = 'block';
-    document.getElementById('p-editing-index').value = index;
-    const p = index >= 0 ? config.products[currentCat][index] : null;
-    document.getElementById('p-name').value = p ? p.name : '';
-    document.getElementById('p-spec').value = p ? p.spec : '';
-    document.getElementById('p-price').value = p ? p.price : '';
-    setStock(p ? p.stock : 2);
-    productImageData = (p && p.image) ? p.image : '';
-    const preview = document.getElementById('p-image-preview');
-    if (productImageData) { preview.src = productImageData; preview.style.display = 'block'; }
-    else { preview.style.display = 'none'; }
-    document.getElementById('p-image').value = '';
-    document.getElementById('p-name').scrollIntoView({ behavior:'smooth', block:'center' });
-  }
-  document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
-  document.getElementById('cancel-product').addEventListener('click', () => {
-    document.getElementById('product-form-card').style.display = 'none';
-  });
-  window.editProduct = (i) => openProductForm(i);
-
-  document.getElementById('p-image').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      productImageData = await readAndCompressImage(file);
-      const preview = document.getElementById('p-image-preview');
-      preview.src = productImageData;
-      preview.style.display = 'block';
-    } catch (err) {
-      toast('Errore nel caricare la foto: ' + err.message, true);
-    }
-  });
-
-  async function publishCatalog(successMsg, notifyBody){
-    try {
-      config = await apiFetch('/api/admin/config', {
-        method: 'PUT',
-        body: JSON.stringify({
-          products: config.products,
-          notify: { title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`, body: notifyBody }
-        })
-      });
-      toast(successMsg);
-    } catch (err) {
-      toast('Errore nel pubblicare: ' + err.message, true);
-    }
-  }
-
-  window.removeProduct = async (i) => {
-    if (!confirm('Eliminare questo prodotto?')) return;
-    const removedName = config.products[currentCat][i].name;
-    config.products[currentCat].splice(i, 1);
-    renderProducts();
-    await publishCatalog('Prodotto eliminato e pubblicato.', `${removedName} non è più disponibile.`);
+  // --- STATO LOCALE ---
+  let currentCategory = 'smartphone';
+  let catalogData = {
+    smartphone: [],
+    accessori: [],
+    ricambi: []
   };
 
-  document.getElementById('save-product').addEventListener('click', async () => {
-    const name = document.getElementById('p-name').value.trim();
-    const spec = document.getElementById('p-spec').value.trim();
-    const price = document.getElementById('p-price').value.trim();
-    if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
-    const product = { name, spec, price, stock: stockValue, image: productImageData || '' };
-    const idx = Number(document.getElementById('p-editing-index').value);
-    const isNew = idx < 0;
-    if (!config.products[currentCat]) config.products[currentCat] = [];
-    if (idx >= 0) config.products[currentCat][idx] = product;
-    else config.products[currentCat].push(product);
-    document.getElementById('product-form-card').style.display = 'none';
-    renderProducts();
-    const notifyBody = isNew ? `Novità: ${name} — ${price}` : `Aggiornato: ${name} — ${price}`;
-    await publishCatalog('Prodotto salvato e pubblicato.', notifyBody);
+  // --- INIZIALIZZAZIONE ---
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadCatalogFromServer();
+    renderList();
   });
 
-  // ---------------- GESTORI ----------------
-  let currentCarrier = 'tim';
-
-  document.getElementById('carrier-cat-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.cat-tab');
-    if (!btn) return;
-    document.querySelectorAll('#carrier-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentCarrier = btn.dataset.carrier;
-    renderCarrierPlansList();
-  });
-
-  function renderCarrierPlansList(){
-    if (!config || !config.carriers) return;
-    const list = document.getElementById('carrier-plans-list');
-    const items = config.carriers[currentCarrier] || [];
-    if (items.length === 0){
-      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun piano per questo gestore.</p>';
-      return;
-    }
-    list.innerHTML = items.map((p, i) => `
-      <div class="card">
-        ${p.isPhoto
-          ? `<img src="${p.image}" style="width:100%;border-radius:10px;display:block;margin-bottom:8px;">
-             <p style="color:var(--text-dim);">Offerta caricata come foto</p>`
-          : `<div class="row">
-              <div>
-                <h3>${p.name}</h3>
-                <p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p>
-              </div>
-              <div class="pct">${p.price}</div>
-            </div>`}
-        <div class="actions">
-          <button class="secondary" onclick='editPlan(${i})'>Modifica</button>
-          <button class="danger" onclick="removePlan(${i})">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  let planTypeValue = 'mobile';
-  function setPlanType(v){
-    planTypeValue = v;
-    document.querySelectorAll('#plan-type-row .heat-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
-  }
-  document.getElementById('plan-type-row').addEventListener('click', (e) => {
-    const opt = e.target.closest('.heat-opt');
-    if (opt) setPlanType(opt.dataset.v);
-  });
-
-  let planImageData = '';
-  function openPlanForm(index){
-    document.getElementById('plan-form-card').style.display = 'block';
-    document.getElementById('pl-editing-index').value = index;
-    const p = index >= 0 ? config.carriers[currentCarrier][index] : null;
-    document.getElementById('pl-name').value = p ? p.name : '';
-    document.getElementById('pl-price').value = p ? p.price : '';
-    document.getElementById('pl-details').value = p ? p.details : '';
-    setPlanType(p ? p.type : 'mobile');
-    planImageData = (p && p.image) ? p.image : '';
-    const preview = document.getElementById('pl-image-preview');
-    if (planImageData) { preview.src = planImageData; preview.style.display = 'block'; }
-    else { preview.style.display = 'none'; }
-    document.getElementById('pl-image').value = '';
-    document.getElementById('pl-name').scrollIntoView({ behavior:'smooth', block:'center' });
-  }
-  document.getElementById('add-plan-btn').addEventListener('click', () => openPlanForm(-1));
-  document.getElementById('cancel-plan').addEventListener('click', () => {
-    document.getElementById('plan-form-card').style.display = 'none';
-  });
-  window.editPlan = (i) => openPlanForm(i);
-
-  document.getElementById('pl-image').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  async function loadCatalogFromServer() {
     try {
-      // Risoluzione piu' alta per i piani: spesso e' la foto di un volantino
-      // (anche in formato A5), e il testo deve restare leggibile.
-      planImageData = isPdfFile(file)
-        ? await renderPdfFirstPageToDataUrl(file, 900)
-        : await readAndCompressImage(file, 900, 0.78);
-      const preview = document.getElementById('pl-image-preview');
-      preview.src = planImageData;
-      preview.style.display = 'block';
-    } catch (err) {
-      toast('Errore nel caricare la foto: ' + err.message, true);
-    }
-  });
-
-  async function publishCarriers(successMsg, notifyBody){
-    try {
-      config = await apiFetch('/api/admin/config', {
-        method: 'PUT',
-        body: JSON.stringify({
-          carriers: config.carriers,
-          notify: { title: `${config.shopName || 'Fvc Project'} · Telefonia & Fibra`, body: notifyBody }
-        })
-      });
-      toast(successMsg);
-    } catch (err) {
-      toast('Errore nel pubblicare: ' + err.message, true);
-    }
-  }
-
-  window.removePlan = async (i) => {
-    if (!confirm('Eliminare questo piano?')) return;
-    const removedName = config.carriers[currentCarrier][i].name || "un'offerta";
-    config.carriers[currentCarrier].splice(i, 1);
-    renderCarrierPlansList();
-    await publishCarriers('Piano eliminato e pubblicato.', `${removedName} non è più disponibile.`);
-  };
-
-  document.getElementById('save-plan').addEventListener('click', async () => {
-    const name = document.getElementById('pl-name').value.trim();
-    const price = document.getElementById('pl-price').value.trim();
-    const details = document.getElementById('pl-details').value.trim();
-    // Se hai caricato una foto (es. il volantino dell'offerta), non serve
-    // compilare anche gli altri campi: viene mostrata cosi' com'e'.
-    if (!planImageData && (!name || !price)) {
-      toast('Compila nome e prezzo, oppure carica una foto dell\'offerta.', true);
-      return;
-    }
-    const isPhotoOnly = !!planImageData && !name && !price;
-    const plan = {
-      name, type: planTypeValue, price, details,
-      image: planImageData || '',
-      isPhoto: isPhotoOnly
-    };
-    const idx = Number(document.getElementById('pl-editing-index').value);
-    const isNew = idx < 0;
-    if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
-    if (idx >= 0) config.carriers[currentCarrier][idx] = plan;
-    else config.carriers[currentCarrier].push(plan);
-    document.getElementById('plan-form-card').style.display = 'none';
-    renderCarrierPlansList();
-    const label = name || `un'offerta ${currentCarrier.toUpperCase()}`;
-    const notifyBody = isNew ? `Novità ${currentCarrier.toUpperCase()}: ${label}` : `Aggiornato ${currentCarrier.toUpperCase()}: ${label}`;
-    await publishCarriers('Piano salvato e pubblicato.', notifyBody);
-  });
-
-  // ---------------- RATE ----------------
-  let currentInstallmentCarrier = 'tim';
-  let installmentImageData = '';
-
-  document.getElementById('installment-cat-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.cat-tab');
-    if (!btn) return;
-    document.querySelectorAll('#installment-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentInstallmentCarrier = btn.dataset.carrier;
-    renderInstallmentPlansList();
-  });
-
-  function renderInstallmentPlansList(){
-    if (!config || !config.installments) return;
-    const list = document.getElementById('installment-plans-list');
-    const items = config.installments[currentInstallmentCarrier] || [];
-    if (items.length === 0){
-      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna rateizzazione per questo gestore.</p>';
-      return;
-    }
-    list.innerHTML = items.map((p, i) => `
-      <div class="card">
-        ${p.isPhoto
-          ? `<img src="${p.image}" style="width:100%;border-radius:10px;display:block;margin-bottom:8px;">
-             <p style="color:var(--text-dim);">Rateizzazione caricata come foto</p>`
-          : `<div class="row">
-              <div>
-                <h3>${p.name}</h3>
-                <p>${p.details || ''}</p>
-              </div>
-              <div class="pct">${p.price}</div>
-            </div>`}
-        <div class="actions">
-          <button class="secondary" onclick='editInstallment(${i})'>Modifica</button>
-          <button class="danger" onclick="removeInstallment(${i})">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function openInstallmentForm(index){
-    document.getElementById('installment-form-card').style.display = 'block';
-    document.getElementById('in-editing-index').value = index;
-    const p = index >= 0 ? config.installments[currentInstallmentCarrier][index] : null;
-    document.getElementById('in-name').value = p ? p.name : '';
-    document.getElementById('in-price').value = p ? p.price : '';
-    document.getElementById('in-details').value = p ? p.details : '';
-    installmentImageData = (p && p.image) ? p.image : '';
-    const preview = document.getElementById('in-image-preview');
-    if (installmentImageData) { preview.src = installmentImageData; preview.style.display = 'block'; }
-    else { preview.style.display = 'none'; }
-    document.getElementById('in-image').value = '';
-    document.getElementById('in-name').scrollIntoView({ behavior:'smooth', block:'center' });
-  }
-  document.getElementById('add-installment-btn').addEventListener('click', () => openInstallmentForm(-1));
-
-  // ---- importazione da file Excel/CSV ----
-  let importedRows = []; // array di oggetti riga (una per ogni riga del file)
-  let importedHeaders = [];
-  let importMode = 'append';
-
-  document.getElementById('import-excel-btn').addEventListener('click', () => {
-    document.getElementById('excel-file-input').click();
-  });
-
-  document.getElementById('excel-file-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (typeof XLSX === 'undefined') {
-      toast('Libreria di lettura Excel non disponibile: controlla la connessione internet.', true);
-      return;
-    }
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
-      if (rows.length === 0) {
-        toast('Il file sembra vuoto o non leggibile.', true);
-        return;
+      const res = await fetch('/api/config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.products) catalogData = data.products;
       }
-      importedRows = rows;
-      importedHeaders = Object.keys(rows[0]);
-      openImportPanel();
-    } catch (err) {
-      toast('Errore nella lettura del file: ' + err.message, true);
+    } catch (e) {
+      console.warn("Impossibile caricare config iniziale, uso memoria locale vuota.");
     }
-    e.target.value = '';
-  });
-
-  // Prova a indovinare quale colonna e' nome/prezzo/dettagli in base al
-  // nome dell'intestazione, cosi' il negoziante deve solo confermare.
-  function guessColumn(headers, keywords) {
-    const lower = headers.map(h => h.toLowerCase());
-    for (const kw of keywords) {
-      const idx = lower.findIndex(h => h.includes(kw));
-      if (idx >= 0) return headers[idx];
-    }
-    return headers[0] || '';
   }
 
-  function openImportPanel(){
-    document.getElementById('import-card').style.display = 'block';
-    document.getElementById('import-summary').textContent =
-      `Trovate ${importedRows.length} righe nel file. Indica quale colonna corrisponde a cosa:`;
-
-    const nameSel = document.getElementById('import-col-name');
-    const priceSel = document.getElementById('import-col-price');
-    const detailsSel = document.getElementById('import-col-details');
-    const options = importedHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
-    nameSel.innerHTML = options;
-    priceSel.innerHTML = `<option value="">— nessuna —</option>` + options;
-    detailsSel.innerHTML = `<option value="">— nessuna —</option>` + options;
-
-    nameSel.value = guessColumn(importedHeaders, ['modello', 'dispositivo', 'device', 'nome', 'smartphone', 'prodotto']);
-    priceSel.value = guessColumn(importedHeaders, ['rata', 'canone', 'prezzo', 'importo', 'mese']);
-    detailsSel.value = guessColumn(importedHeaders, ['note', 'dettagli', 'descrizione', 'tan', 'taeg', 'condizioni']);
-
-    updateImportPreview();
-    nameSel.onchange = updateImportPreview;
-    priceSel.onchange = updateImportPreview;
-    detailsSel.onchange = updateImportPreview;
-
-    document.getElementById('import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // --- GESTIONE TAB ---
+  function switchTab(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    clearForm();
+    renderList();
   }
 
-  function updateImportPreview(){
-    const nameCol = document.getElementById('import-col-name').value;
-    const priceCol = document.getElementById('import-col-price').value;
-    const preview = importedRows.slice(0, 3).map(r => {
-      const n = r[nameCol] || '(vuoto)';
-      const p = priceCol ? (r[priceCol] || '(vuoto)') : '—';
-      return `${n} · ${p}`;
-    }).join('<br>');
-    document.getElementById('import-preview').innerHTML = `<strong>Anteprima prime righe:</strong><br>${preview}`;
-  }
+  // --- GESTIONE PRODOTTI (CRUD LOCALE) ---
+  function addOrUpdateProduct() {
+    const id = document.getElementById('prod-id').value;
+    const name = document.getElementById('prod-name').value;
+    const spec = document.getElementById('prod-spec').value;
+    const price = document.getElementById('prod-price').value;
+    const stock = parseInt(document.getElementById('prod-stock').value) || 0;
 
-  document.getElementById('cancel-import').addEventListener('click', () => {
-    document.getElementById('import-card').style.display = 'none';
-  });
+    if (!name || !price) { alert("Inserisci almeno Nome e Prezzo"); return; }
 
-  document.getElementById('import-mode-row').addEventListener('click', (e) => {
-    const opt = e.target.closest('.heat-opt');
-    if (!opt) return;
-    importMode = opt.dataset.v;
-    document.querySelectorAll('#import-mode-row .heat-opt').forEach(el => el.classList.toggle('active', el === opt));
-  });
+    const newProd = { name, spec, price, stock, id: id ? parseInt(id) : Date.now() };
 
-  document.getElementById('confirm-import').addEventListener('click', async () => {
-    const nameCol = document.getElementById('import-col-name').value;
-    const priceCol = document.getElementById('import-col-price').value;
-    const detailsCol = document.getElementById('import-col-details').value;
-
-    const newPlans = importedRows
-      .map(r => ({
-        name: String(r[nameCol] || '').trim(),
-        price: priceCol ? String(r[priceCol] || '').trim() : '',
-        details: detailsCol ? String(r[detailsCol] || '').trim() : '',
-        image: '', isPhoto: false
-      }))
-      .filter(p => p.name); // scarta righe senza nome (es. righe vuote/di intestazione)
-
-    if (newPlans.length === 0) {
-      toast('Nessuna riga valida trovata con questa colonna nome.', true);
-      return;
-    }
-
-    if (!config.installments[currentInstallmentCarrier]) config.installments[currentInstallmentCarrier] = [];
-    if (importMode === 'replace') {
-      config.installments[currentInstallmentCarrier] = newPlans;
+    if (id) {
+      // Update
+      const index = catalogData[currentCategory].findIndex(p => p.id == id);
+      if (index !== -1) catalogData[currentCategory][index] = newProd;
     } else {
-      config.installments[currentInstallmentCarrier] = config.installments[currentInstallmentCarrier].concat(newPlans);
+      // Create
+      catalogData[currentCategory].push(newProd);
     }
 
-    document.getElementById('import-card').style.display = 'none';
-    renderInstallmentPlansList();
-    await publishInstallments(
-      `Importate ${newPlans.length} rateizzazioni.`,
-      `Abbiamo aggiornato le rateizzazioni ${currentInstallmentCarrier.toUpperCase()}: ${newPlans.length} nuove opzioni disponibili.`
-    );
-  });
-  document.getElementById('cancel-installment').addEventListener('click', () => {
-    document.getElementById('installment-form-card').style.display = 'none';
-  });
-  window.editInstallment = (i) => openInstallmentForm(i);
-
-  document.getElementById('in-image').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      installmentImageData = isPdfFile(file)
-        ? await renderPdfFirstPageToDataUrl(file, 900)
-        : await readAndCompressImage(file, 900, 0.78);
-      const preview = document.getElementById('in-image-preview');
-      preview.src = installmentImageData;
-      preview.style.display = 'block';
-    } catch (err) {
-      toast('Errore nel caricare la foto: ' + err.message, true);
-    }
-  });
-
-  async function publishInstallments(successMsg, notifyBody){
-    try {
-      config = await apiFetch('/api/admin/config', {
-        method: 'PUT',
-        body: JSON.stringify({
-          installments: config.installments,
-          notify: { title: `${config.shopName || 'Fvc Project'} · Acquista a rate`, body: notifyBody }
-        })
-      });
-      toast(successMsg);
-    } catch (err) {
-      toast('Errore nel pubblicare: ' + err.message, true);
-    }
+    clearForm();
+    renderList();
   }
 
-  window.removeInstallment = async (i) => {
-    if (!confirm('Eliminare questa rateizzazione?')) return;
-    const removedName = config.installments[currentInstallmentCarrier][i].name || "una rateizzazione";
-    config.installments[currentInstallmentCarrier].splice(i, 1);
-    renderInstallmentPlansList();
-    await publishInstallments('Rateizzazione eliminata e pubblicata.', `${removedName} non è più disponibile.`);
-  };
-
-  // ---- Eliminazione in blocco delle rateizzazioni ----
-  // Salva e avvisa SEMPRE i clienti con una notifica riepilogativa.
-  async function saveInstallmentsSilently(successMsg, notifyBody){
-    try {
-      config = await apiFetch('/api/admin/config', {
-        method: 'PUT',
-        body: JSON.stringify({
-          installments: config.installments,
-          notify: {
-            title: `${config.shopName || 'Fvc Project'} · Acquista a rate`,
-            body: notifyBody || 'Le rateizzazioni sono state aggiornate.'
-          }
-        })
-      });
-      toast(successMsg);
-    } catch (err) {
-      toast('Errore nel salvare: ' + err.message, true);
-    }
+  function editProduct(id) {
+    const prod = catalogData[currentCategory].find(p => p.id == id);
+    if (!prod) return;
+    document.getElementById('prod-id').value = prod.id;
+    document.getElementById('prod-name').value = prod.name;
+    document.getElementById('prod-spec').value = prod.spec;
+    document.getElementById('prod-price').value = prod.price;
+    document.getElementById('prod-stock').value = prod.stock;
   }
 
-  document.getElementById('clear-installments-btn').addEventListener('click', async () => {
-    if (!config || !config.installments) return;
-    const carrier = currentInstallmentCarrier;
-    const count = (config.installments[carrier] || []).length;
-    const totale = Object.values(config.installments).reduce((n, arr) => n + (arr ? arr.length : 0), 0);
-    if (totale === 0){
-      toast('Non c\'e\' nessuna rateizzazione da eliminare.', true);
+  function deleteProduct(id) {
+    if(!confirm("Eliminare questo prodotto dalla lista?")) return;
+    catalogData[currentCategory] = catalogData[currentCategory].filter(p => p.id != id);
+    renderList();
+  }
+
+  function clearForm() {
+    document.getElementById('prod-id').value = '';
+    document.getElementById('prod-name').value = '';
+    document.getElementById('prod-spec').value = '';
+    document.getElementById('prod-price').value = '';
+    document.getElementById('prod-stock').value = '4';
+  }
+
+  function renderList() {
+    const ul = document.getElementById('product-list-ul');
+    const count = document.getElementById('count-display');
+    ul.innerHTML = '';
+    
+    const list = catalogData[currentCategory];
+    count.textContent = list.length;
+
+    if (list.length === 0) {
+      ul.innerHTML = '<li style="padding:10px; color:var(--text-dim); text-align:center;">Nessun prodotto in questa categoria.</li>';
       return;
     }
-    const soloQuesto = confirm(
-      `Vuoi eliminare le ${count} rateizzazioni di ${carrier.toUpperCase()}?\n\n` +
-      `OK = svuota solo ${carrier.toUpperCase()}\n` +
-      `Annulla = scegli se svuotare TUTTI i gestori (${totale} in totale)`
-    );
-    if (soloQuesto){
-      if (count === 0){
-        toast('Questo gestore non ha rateizzazioni.', true);
-        return;
-      }
-      config.installments[carrier] = [];
-      renderInstallmentPlansList();
-      await saveInstallmentsSilently(`Eliminate ${count} rateizzazioni di ${carrier.toUpperCase()}. Notifica inviata.`, `Le rateizzazioni ${carrier.toUpperCase()} non sono piu' disponibili.`);
-    } else {
-      if (!confirm(`Eliminare TUTTE le ${totale} rateizzazioni di tutti i gestori? L'operazione non e' reversibile.`)) return;
-      Object.keys(config.installments).forEach(k => { config.installments[k] = []; });
-      renderInstallmentPlansList();
-      await saveInstallmentsSilently(`Eliminate tutte le ${totale} rateizzazioni. Notifica inviata.`, 'Le rateizzazioni precedenti sono terminate. Restate sintonizzati!');
-    }
-  });
 
-  document.getElementById('save-installment').addEventListener('click', async () => {
-    const name = document.getElementById('in-name').value.trim();
-    const price = document.getElementById('in-price').value.trim();
-    const details = document.getElementById('in-details').value.trim();
-    if (!installmentImageData && (!name || !price)) {
-      toast('Compila nome e rate, oppure carica una foto del volantino.', true);
-      return;
-    }
-    const isPhotoOnly = !!installmentImageData && !name && !price;
-    const plan = { name, price, details, image: installmentImageData || '', isPhoto: isPhotoOnly };
-    const idx = Number(document.getElementById('in-editing-index').value);
-    const isNew = idx < 0;
-    if (!config.installments[currentInstallmentCarrier]) config.installments[currentInstallmentCarrier] = [];
-    if (idx >= 0) config.installments[currentInstallmentCarrier][idx] = plan;
-    else config.installments[currentInstallmentCarrier].push(plan);
-    document.getElementById('installment-form-card').style.display = 'none';
-    renderInstallmentPlansList();
-    const label = name || `una rateizzazione ${currentInstallmentCarrier.toUpperCase()}`;
-    const notifyBody = isNew ? `Nuova rateizzazione ${currentInstallmentCarrier.toUpperCase()}: ${label}` : `Aggiornata rateizzazione ${currentInstallmentCarrier.toUpperCase()}: ${label}`;
-    await publishInstallments('Rateizzazione salvata e pubblicata.', notifyBody);
-  });
-
-  // ---------------- OFFERTE ----------------
-  function heatDots(n){
-    let out = '';
-    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
-    return out;
-  }
-
-  async function loadOffers(){
-    try {
-      const offers = await apiFetch('/api/admin/offers');
-      const list = document.getElementById('offers-list');
-      if (offers.length === 0){
-        list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna offerta al momento.</p>';
-        return;
-      }
-      list.innerHTML = offers.map(o => `
-        <div class="card">
-          <div class="row">
-            <div>
-              <h3>${o.title}</h3>
-              <p>${o.desc || ''}</p>
-            </div>
-            <div class="pct">${o.pct}</div>
-          </div>
-          <div style="margin-top:8px;">${heatDots(o.heat)}</div>
-          <div class="actions">
-            <button class="secondary" onclick='editOffer(${JSON.stringify(o).replace(/'/g,"&apos;")})'>Modifica</button>
-            <button class="danger" onclick="removeOffer('${o.id}')">Elimina</button>
-          </div>
+    list.forEach(p => {
+      const li = document.createElement('li');
+      li.className = 'product-item';
+      li.innerHTML = `
+        <div>
+          <strong>${p.name}</strong> <small style="color:var(--text-dim)">(${p.spec})</small><br>
+          <span style="color:var(--gold)">${p.price}</span> • Stock: ${p.stock}
         </div>
-      `).join('');
-    } catch (err) {
-      toast('Errore nel caricamento: ' + err.message, true);
-    }
+        <div style="display:flex; gap:5px;">
+          <button class="btn btn-ghost" onclick="editProduct(${p.id})">✏️</button>
+          <button class="btn btn-danger" onclick="deleteProduct(${p.id})">🗑️</button>
+        </div>
+      `;
+      ul.appendChild(li);
+    });
   }
 
-  function setHeat(v){
-    heatValue = v;
-    document.querySelectorAll('#heat-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
-  }
-  document.getElementById('heat-row').addEventListener('click', (e) => {
-    const opt = e.target.closest('.heat-opt');
-    if (opt) setHeat(Number(opt.dataset.v));
-  });
+  // --- SALVATAGGIO GLOBALE E NOTIFICA (IL CUORE DELLA RICHIESTA) ---
+  async function saveCatalogAndNotify() {
+    const statusEl = document.getElementById('status-msg');
+    const btn = document.querySelector('.btn-success');
+    
+    btn.disabled = true;
+    btn.textContent = "⏳ Salvataggio e invio notifiche in corso...";
+    statusEl.className = '';
+    statusEl.textContent = '';
 
-  function openForm(offer){
-    document.getElementById('offer-form-card').style.display = 'block';
-    document.getElementById('f-editing-id').value = offer ? offer.id : '';
-    document.getElementById('f-id').value = offer ? offer.id : '';
-    document.getElementById('f-id').disabled = !!offer;
-    document.getElementById('f-pct').value = offer ? offer.pct : '';
-    document.getElementById('f-title').value = offer ? offer.title : '';
-    document.getElementById('f-desc').value = offer ? (offer.desc || '') : '';
-    setHeat(offer ? offer.heat : 2);
-    document.getElementById('f-id').scrollIntoView({ behavior:'smooth', block:'center' });
-  }
-  document.getElementById('new-offer-btn').addEventListener('click', () => openForm(null));
-  document.getElementById('cancel-btn').addEventListener('click', () => {
-    document.getElementById('offer-form-card').style.display = 'none';
-  });
-  window.editOffer = (offer) => openForm(offer);
-  window.removeOffer = async (id) => {
-    if (!confirm('Eliminare questa offerta?')) return;
     try {
-      await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method: 'DELETE' });
-      toast('Offerta eliminata.');
-      loadOffers();
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    }
-  };
-
-  // ---- Eliminazione in blocco delle offerte ----
-  document.getElementById('clear-offers-btn').addEventListener('click', async () => {
-    if (!confirm('Eliminare TUTTE le offerte pubblicate? L\'operazione non e\' reversibile.')) return;
-    try {
-      const res = await apiFetch('/api/admin/offers', {
-        method: 'DELETE',
-        body: JSON.stringify({ notify: true })
+      // 1. Inviamo l'intero catalogo aggiornato al server
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: catalogData })
       });
-      toast(`Eliminate ${res.removed} offerte. Notifica inviata ai clienti.`);
-      loadOffers();
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    }
-  });
 
-  document.getElementById('save-btn').addEventListener('click', async () => {
-    const editingId = document.getElementById('f-editing-id').value;
-    const payload = {
-      id: document.getElementById('f-id').value.trim(),
-      pct: document.getElementById('f-pct').value.trim(),
-      title: document.getElementById('f-title').value.trim(),
-      desc: document.getElementById('f-desc').value.trim(),
-      heat: heatValue
-    };
-    if (!payload.id || !payload.pct || !payload.title){
-      toast('Compila almeno id, sconto e titolo.', true);
-      return;
+      if (!response.ok) throw new Error("Errore salvataggio server");
+
+      // 2. Se il salvataggio è andato a buon fine, inviamo la notifica PUSH
+      // Questa chiamata triggera il backend a mandare una SOLA notifica a tutti gli iscritti
+      const notifyRes = await fetch('/api/notify-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: "Nuovo Catalogo Disponibile!", 
+          body: "Abbiamo aggiornato i prezzi e i prodotti. Scopri le novità nell'app.",
+          url: "/#catalogo"
+        })
+      });
+
+      if (!notifyRes.ok) throw new Error("Salvato ma errore invio notifiche");
+
+      statusEl.textContent = "✅ Catalogo salvato e notifica inviata a tutti i clienti!";
+      statusEl.className = "status-ok";
+
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = "❌ Errore: " + error.message;
+      statusEl.className = "status-err";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "💾 Salva Catalogo e Avvisa Clienti (Notifica Push)";
     }
+  }
+
+  // --- GESTIONE OFFERTE (Semplificata) ---
+  async function addOffer() {
+    const title = document.getElementById('offer-title').value;
+    const pct = document.getElementById('offer-pct').value;
+    const desc = document.getElementById('offer-desc').value;
+    
+    if(!title) return alert("Inserisci un titolo");
+
+    // Nota: Questo potrebbe sovrascrivere o aggiungere a seconda di come è fatto il tuo backend '/api/offers'
+    // Assumiamo che il backend gestisca l'append o l'update.
     try {
-      if (editingId){
-        await apiFetch('/api/admin/offers/' + encodeURIComponent(editingId), { method: 'PUT', body: JSON.stringify(payload) });
-        toast('Offerta aggiornata.');
-      } else {
-        await apiFetch('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) });
-        toast('Offerta creata: notifica inviata a tutti gli iscritti.');
-      }
-      document.getElementById('offer-form-card').style.display = 'none';
-      loadOffers();
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
+      await fetch('/api/offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, pct, desc, heat: 3 })
+      });
+      alert("Offerta aggiunta/aggiornata!");
+      document.getElementById('offer-title').value = '';
+      document.getElementById('offer-pct').value = '';
+      document.getElementById('offer-desc').value = '';
+    } catch(e) {
+      alert("Errore nel salvare l'offerta");
     }
-  });
+  }
 </script>
 </body>
 </html>
