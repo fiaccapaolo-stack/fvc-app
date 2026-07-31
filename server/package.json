@@ -1,3 +1,4 @@
+{
   "name": "fvc-app-backend",
   "version": "1.0.0",
   "description": "Backend per PWA Fvc Project con gestione notifiche e importazione rate",
