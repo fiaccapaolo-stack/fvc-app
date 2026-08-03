@@ -328,6 +328,26 @@
     return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
   }
 
+  // Legge un file Excel o CSV in modo robusto:
+  // - per i CSV, indovina da solo se il separatore e' la virgola o il punto
+  //   e virgola (tipico degli export in italiano), altrimenti le colonne si
+  //   "spostano" e i numeri letti sono sbagliati;
+  // - per gli Excel, limita le righe lette per evitare che file molto
+  //   pesanti blocchino il browser.
+  async function readWorkbookSmart(file){
+    const isCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
+    if (isCsv) {
+      const text = await file.text();
+      const firstLine = text.split(/\r?\n/).find(l => l.trim().length > 0) || '';
+      const semicolons = (firstLine.match(/;/g) || []).length;
+      const commas = (firstLine.match(/,/g) || []).length;
+      const FS = semicolons > commas ? ';' : ',';
+      return XLSX.read(text, { type: 'string', FS });
+    }
+    const data = await file.arrayBuffer();
+    return XLSX.read(data, { type: 'array', sheetRows: 5000 });
+  }
+
   let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
 
   // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
@@ -598,8 +618,7 @@
       return;
     }
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array', sheetRows: 20000 }); // limite di sicurezza per file con dimensioni gonfiate
+      const workbook = await readWorkbookSmart(file);
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
       if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
@@ -724,8 +743,7 @@
       return;
     }
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array', sheetRows: 20000 }); // limite di sicurezza per file con dimensioni gonfiate
+      const workbook = await readWorkbookSmart(file);
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
       if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
