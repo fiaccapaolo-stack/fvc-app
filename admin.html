@@ -345,7 +345,7 @@
       return XLSX.read(text, { type: 'string', FS });
     }
     const data = await file.arrayBuffer();
-    return XLSX.read(data, { type: 'array', sheetRows: 5000 });
+    return XLSX.read(data, { type: 'array', sheetRows: 50000 });
   }
 
   let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
@@ -636,7 +636,7 @@
           return obj;
         });
       let truncated = false;
-      if (rows.length > 8000) { rows = rows.slice(0, 8000); truncated = true; }
+      if (rows.length > 20000) { rows = rows.slice(0, 20000); truncated = true; }
 
       const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
       const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
@@ -761,7 +761,7 @@
           return obj;
         });
       let truncatedSingle = false;
-      if (rows.length > 8000) { rows = rows.slice(0, 8000); truncatedSingle = true; }
+      if (rows.length > 20000) { rows = rows.slice(0, 20000); truncatedSingle = true; }
       rateListRows = rows;
       rateListHeaders = headers;
       document.getElementById('rate-import-summary').textContent =
