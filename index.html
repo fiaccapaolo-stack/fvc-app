@@ -748,7 +748,10 @@
       ${hasRates
         ? p.installments.map(r => `
             <div class="pm-rate-option">
-              <span class="months">${r.months || ''}</span>
+              <div>
+                <span class="months">${r.months || ''}</span>
+                ${r.discount ? `<br><span style="font-size:11px;color:var(--gold-soft);">Risparmi ${r.discount}</span>` : ''}
+              </div>
               <span class="amount">${r.amount || ''}</span>
             </div>
           `).join('')
