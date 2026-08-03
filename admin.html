@@ -334,6 +334,22 @@
   //   "spostano" e i numeri letti sono sbagliati;
   // - per gli Excel, limita le righe lette per evitare che file molto
   //   pesanti blocchino il browser.
+  // Legge un numero anche se scritto in formato italiano (virgola come
+  // decimale, es. "19,90", o con punto delle migliaia, es. "1.234,56") —
+  // frequente nei file CSV esportati da Excel in italiano.
+  function parseFlexibleNumber(v){
+    if (v === '' || v === null || v === undefined) return null;
+    if (typeof v === 'number') return v;
+    let s = String(v).trim();
+    if (s.includes('.') && s.includes(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',')) {
+      s = s.replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
   async function readWorkbookSmart(file){
     const isCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
     if (isCsv) {
@@ -663,9 +679,9 @@
         const installments = matches.map(r => {
           const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
           const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-          const discountPct = discountPctCol ? Number(r[discountPctCol]) : null;
-          const discountVal = discountCol ? Number(r[discountCol]) : null;
-          const totalVal = totalCol ? Number(r[totalCol]) : null;
+          const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+          const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
+          const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
           return {
             months: months ? `${months} rate` : '',
             amount: amount ? `${amount}€/mese` : '',
@@ -815,8 +831,8 @@
     wrap.innerHTML = matches.slice(0, 40).map((r, i) => {
       const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
       const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-      const discountPct = discountPctCol ? Number(r[discountPctCol]) : null;
-      const discountVal = discountCol ? Number(r[discountCol]) : null;
+      const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+      const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
       let extra = '';
       if (discountVal) {
         const pctText = discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : '';
@@ -843,9 +859,9 @@
     const cols = window._rateMatchCols;
     const months = cols.monthsCol ? String(row[cols.monthsCol] || '').trim() : '';
     const amount = cols.amountCol ? String(row[cols.amountCol] || '').trim() : '';
-    const discountPct = cols.discountPctCol ? Number(row[cols.discountPctCol]) : null;
-    const discountVal = cols.discountCol ? Number(row[cols.discountCol]) : null;
-    const totalVal = cols.totalCol ? Number(row[cols.totalCol]) : null;
+    const discountPct = cols.discountPctCol ? parseFlexibleNumber(row[cols.discountPctCol]) : null;
+    const discountVal = cols.discountCol ? parseFlexibleNumber(row[cols.discountCol]) : null;
+    const totalVal = cols.totalCol ? parseFlexibleNumber(row[cols.totalCol]) : null;
     productInstallments = collectInstallmentRows();
     productInstallments.push({
       months: months ? `${months} rate` : '',
