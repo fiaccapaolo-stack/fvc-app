@@ -310,6 +310,11 @@ async function main() {
     }
     const offer = { id, pct, title, desc: desc || "", heat: Number(heat) || 1, createdAt: Date.now() };
     await saveOffer(offer);
+    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    await sendToAll({
+      title: `${cfg.shopName} · Nuova offerta`,
+      body: `${offer.title}: ${offer.pct}${offer.desc ? ` · ${offer.desc}` : ""}`,
+    });
     res.status(201).json(offer);
   });
 
@@ -327,6 +332,11 @@ async function main() {
       heat: heat !== undefined ? Number(heat) : current.heat,
     };
     await saveOffer(updated);
+    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    await sendToAll({
+      title: `${cfg.shopName} · Offerta aggiornata`,
+      body: `${updated.title}: ${updated.pct}${updated.desc ? ` · ${updated.desc}` : ""}`,
+    });
     res.json(updated);
   });
 
