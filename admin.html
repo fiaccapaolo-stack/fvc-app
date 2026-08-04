@@ -174,6 +174,7 @@
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
       <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
+    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack”. Poi pubblica il catalogo una sola volta.</p>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
@@ -690,7 +691,7 @@
 
       // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
       // listino il cui nome prodotto contiene (o e' contenuto in) il nome
-      // dello smartphone, tenendo solo le durate standard a 24 o 30 mesi.
+      // dello smartphone. Mostriamo solo 30 rate ed escludiamo i "pack".
       const smartphones = config.products.smartphone || [];
       bulkRateResults = [];
       smartphones.forEach((product, idx) => {
@@ -699,10 +700,13 @@
           const rname = String(r[nameCol] || '').toLowerCase();
           if (!rname || !(rname.includes(pname) || pname.includes(rname))) return false;
           const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-          return m === 24 || m === 30;
+          return m === 30 && !/\bpack\b/i.test(rname);
         });
         if (matches.length === 0) return;
-        const installments = matches.map(r => {
+        const uniqueMatches = matches.filter((r, matchIndex) =>
+          matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+        );
+        const installments = uniqueMatches.map(r => {
           const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
           const amount = amountCol ? String(r[amountCol] || '').trim() : '';
           const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
@@ -837,14 +841,17 @@
     const discountCol = guessColumn(rateListHeaders, ['sconto']);
     const totalCol = guessColumn(rateListHeaders, ['valore_rt', 'valore rt']);
 
-    // Ci interessano solo le durate standard a 24 o 30 mesi.
+    // Ci interessano solo le rate a 30 mesi, escludendo i prodotti "pack".
     const allMatches = query
       ? rateListRows.filter(r => String(r[nameCol] || '').toLowerCase().includes(query))
       : [];
     const matches = allMatches.filter(r => {
       const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-      return m === 24 || m === 30;
+      return m === 30 && !/\bpack\b/i.test(String(r[nameCol] || ''));
     });
+    const uniqueMatches = matches.filter((r, matchIndex) =>
+      matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+    );
 
     const wrap = document.getElementById('rate-import-matches');
     if (!query) {
@@ -852,10 +859,10 @@
       return;
     }
     if (matches.length === 0) {
-      wrap.innerHTML = '<p class="hint">Nessun risultato a 24 o 30 rate per questa ricerca.</p>';
+      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate senza dicitura “pack” per questa ricerca.</p>';
       return;
     }
-    wrap.innerHTML = matches.slice(0, 40).map((r, i) => {
+    wrap.innerHTML = uniqueMatches.slice(0, 40).map((r, i) => {
       const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
       const amount = amountCol ? String(r[amountCol] || '').trim() : '';
       const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
@@ -872,8 +879,8 @@
           <button type="button" onclick="addRateMatch(${i})">+ Aggiungi</button>
         </div>
       `;
-    }).join('') + (matches.length > 40 ? `<p class="hint">Mostrati i primi 40 di ${matches.length} risultati — restringi la ricerca per vedere gli altri.</p>` : '');
-    window._rateMatchesCurrent = matches;
+    }).join('') + (uniqueMatches.length > 40 ? `<p class="hint">Mostrati i primi 40 di ${uniqueMatches.length} risultati — restringi la ricerca per vedere gli altri.</p>` : '');
+    window._rateMatchesCurrent = uniqueMatches;
     window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol };
   }
   document.getElementById('rate-search').addEventListener('input', renderRateMatches);

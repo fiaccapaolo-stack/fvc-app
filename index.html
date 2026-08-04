@@ -221,6 +221,15 @@
     font-size:15px;
     color:var(--gold-soft);
   }
+  .installment-preview{
+    margin:0;
+    min-height:15px;
+    color:var(--cyan);
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    line-height:1.35;
+  }
+  .installment-preview strong{font-weight:600; color:var(--gold-soft);}
   .stock{
     display:flex; align-items:flex-end; gap:2px; height:10px;
   }
@@ -715,6 +724,9 @@
         </div>
         <h4>${p.name}</h4>
         <p class="spec">${p.spec}</p>
+        ${cat === 'smartphone' && Array.isArray(p.installments) && p.installments.length
+          ? `<p class="installment-preview"><strong>A rate</strong> · ${p.installments[0].months || ''} da ${p.installments[0].amount || ''}</p>`
+          : ''}
         <div class="row">
           <span class="price">${p.price}</span>
           <span class="stock">${stockDots(p.stock)}</span>
