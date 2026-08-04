@@ -695,10 +695,9 @@
       const smartphones = config.products.smartphone || [];
       bulkRateResults = [];
       smartphones.forEach((product, idx) => {
-        const pname = product.name.toLowerCase();
         const matches = rows.filter(r => {
-          const rname = String(r[nameCol] || '').toLowerCase();
-          if (!rname || !(rname.includes(pname) || pname.includes(rname))) return false;
+          const rname = String(r[nameCol] || '');
+          if (!productNamesMatch(rname, product.name)) return false;
           const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
           return m === 30 && !/\bpack\b/i.test(rname);
         });
@@ -832,6 +831,23 @@
     return '';
   }
 
+  // I listini non usano sempre lo stesso formato: ad esempio "iPhone17"
+  // puo' corrispondere a "iPhone 17" nel catalogo. Per il confronto
+  // ignoriamo spazi, trattini, underscore e altri separatori.
+  function normalizeProductName(value){
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function productNamesMatch(sourceName, catalogName){
+    const source = normalizeProductName(sourceName);
+    const catalog = normalizeProductName(catalogName);
+    return !!source && !!catalog && (source.includes(catalog) || catalog.includes(source));
+  }
+
   function renderRateMatches(){
     const query = document.getElementById('rate-search').value.trim().toLowerCase();
     const nameCol = guessColumn(rateListHeaders, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || rateListHeaders[0];
@@ -843,7 +859,7 @@
 
     // Ci interessano solo le rate a 30 mesi, escludendo i prodotti "pack".
     const allMatches = query
-      ? rateListRows.filter(r => String(r[nameCol] || '').toLowerCase().includes(query))
+      ? rateListRows.filter(r => productNamesMatch(r[nameCol], query))
       : [];
     const matches = allMatches.filter(r => {
       const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
