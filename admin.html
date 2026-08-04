@@ -174,6 +174,7 @@
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
       <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
+    <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
     <div class="card" id="bulk-rate-card" style="display:none; margin-top:12px;">
@@ -243,7 +244,10 @@
       <button class="cat-tab" data-carrier="kena">Kena</button>
     </div>
     <div id="carrier-plans-list"></div>
-    <button id="add-plan-btn" type="button">+ Nuovo piano</button>
+    <div class="cta-row2">
+      <button id="add-plan-btn" type="button">+ Nuovo piano</button>
+      <button id="publish-carriers-btn" type="button" class="secondary" disabled>Pubblica gestori</button>
+    </div>
 
     <div class="card" id="plan-form-card" style="display:none; margin-top:12px;">
       <input type="hidden" id="pl-editing-index" value="-1">
@@ -393,6 +397,8 @@
   let currentCat = 'smartphone';
   let heatValue = 2;
   let stockValue = 2;
+  let catalogDirty = false;
+  let carriersDirty = false;
 
   function toast(msg, isError){
     const t = document.getElementById('toast');
@@ -494,6 +500,8 @@
       renderHoursRows(config.hours || []);
       renderProducts();
       renderCarrierPlansList();
+      setCatalogDirty(false);
+      setCarriersDirty(false);
     } catch (err) {
       toast('Errore nel caricamento: ' + err.message, true);
     }
@@ -508,8 +516,17 @@
         whatsapp: document.getElementById('n-whatsapp').value.trim(),
         hours: collectHours().filter(h => h.label || h.value),
       };
-      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(payload) });
-      toast('Info negozio salvate.');
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...payload,
+          notify: {
+            title: `${payload.shopName || 'Fvc Project'} · Negozio aggiornato`,
+            body: 'Abbiamo aggiornato le informazioni del negozio. Tocca per vedere i dettagli.'
+          }
+        })
+      });
+      toast('Info negozio salvate e clienti avvisati.');
     } catch (err) {
       toast('Errore: ' + err.message, true);
     }
@@ -555,6 +572,15 @@
         </div>
       </div>
     `).join('');
+  }
+
+  function setCatalogDirty(isDirty){
+    catalogDirty = isDirty;
+    const button = document.getElementById('publish-catalog-btn');
+    button.disabled = !isDirty;
+    button.textContent = isDirty
+      ? 'Pubblica catalogo e avvisa i clienti'
+      : 'Catalogo già pubblicato';
   }
 
   function setStock(v){
@@ -722,7 +748,8 @@
     });
     document.getElementById('bulk-rate-card').style.display = 'none';
     if (currentCat === 'smartphone') renderProducts();
-    await publishCatalog(`Rate aggiornate per ${bulkRateResults.length} smartphone.`);
+    setCatalogDirty(true);
+    toast(`Rate aggiornate per ${bulkRateResults.length} smartphone. Pubblica il catalogo quando hai finito.`);
   });
 
   document.getElementById('cancel-product').addEventListener('click', () => {
@@ -874,22 +901,40 @@
   };
 
   async function publishCatalog(successMsg){
+    if (!catalogDirty) return;
+    const button = document.getElementById('publish-catalog-btn');
+    button.disabled = true;
     try {
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
-        body: JSON.stringify({ products: config.products })
+        body: JSON.stringify({
+          products: config.products,
+          notify: {
+            title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`,
+            body: 'Ci sono novità nel catalogo: prodotti, prezzi o disponibilità aggiornati.'
+          }
+        })
       });
+      setCatalogDirty(false);
       toast(successMsg);
     } catch (err) {
+      button.disabled = false;
       toast('Errore nel pubblicare: ' + err.message, true);
     }
   }
+
+  document.getElementById('publish-catalog-btn').addEventListener('click', () => {
+    if (confirm('Pubblicare tutte le modifiche al catalogo e inviare una sola notifica ai clienti?')) {
+      publishCatalog('Catalogo pubblicato e clienti avvisati.');
+    }
+  });
 
   window.removeProduct = async (i) => {
     if (!confirm('Eliminare questo prodotto?')) return;
     config.products[currentCat].splice(i, 1);
     renderProducts();
-    await publishCatalog('Prodotto eliminato e pubblicato.');
+    setCatalogDirty(true);
+    toast('Modifica pronta. Pubblica il catalogo quando hai finito.');
   };
 
   document.getElementById('save-product').addEventListener('click', async () => {
@@ -905,7 +950,8 @@
     else config.products[currentCat].push(product);
     document.getElementById('product-form-card').style.display = 'none';
     renderProducts();
-    await publishCatalog('Prodotto salvato e pubblicato.');
+    setCatalogDirty(true);
+    toast('Prodotto pronto. Pubblica il catalogo quando hai finito.');
   });
 
   // ---------------- GESTORI ----------------
@@ -946,6 +992,13 @@
         </div>
       </div>
     `).join('');
+  }
+
+  function setCarriersDirty(isDirty){
+    carriersDirty = isDirty;
+    const button = document.getElementById('publish-carriers-btn');
+    button.disabled = !isDirty;
+    button.textContent = isDirty ? 'Pubblica gestori e avvisa' : 'Gestori già pubblicati';
   }
 
   let planTypeValue = 'mobile';
@@ -998,22 +1051,40 @@
   });
 
   async function publishCarriers(successMsg){
+    if (!carriersDirty) return;
+    const button = document.getElementById('publish-carriers-btn');
+    button.disabled = true;
     try {
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
-        body: JSON.stringify({ carriers: config.carriers })
+        body: JSON.stringify({
+          carriers: config.carriers,
+          notify: {
+            title: `${config.shopName || 'Fvc Project'} · Offerte aggiornate`,
+            body: 'Abbiamo aggiornato le offerte di telefonia e fibra. Tocca per scoprirle.'
+          }
+        })
       });
+      setCarriersDirty(false);
       toast(successMsg);
     } catch (err) {
+      button.disabled = false;
       toast('Errore nel pubblicare: ' + err.message, true);
     }
   }
+
+  document.getElementById('publish-carriers-btn').addEventListener('click', () => {
+    if (confirm('Pubblicare tutte le modifiche ai gestori e inviare una sola notifica ai clienti?')) {
+      publishCarriers('Gestori pubblicati e clienti avvisati.');
+    }
+  });
 
   window.removePlan = async (i) => {
     if (!confirm('Eliminare questo piano?')) return;
     config.carriers[currentCarrier].splice(i, 1);
     renderCarrierPlansList();
-    await publishCarriers('Piano eliminato e pubblicato.');
+    setCarriersDirty(true);
+    toast('Modifica pronta. Pubblica i gestori quando hai finito.');
   };
 
   document.getElementById('save-plan').addEventListener('click', async () => {
@@ -1038,7 +1109,8 @@
     else config.carriers[currentCarrier].push(plan);
     document.getElementById('plan-form-card').style.display = 'none';
     renderCarrierPlansList();
-    await publishCarriers('Piano salvato e pubblicato.');
+    setCarriersDirty(true);
+    toast('Piano pronto. Pubblica i gestori quando hai finito.');
   });
 
   // ---------------- OFFERTE ----------------
@@ -1129,7 +1201,7 @@
     try {
       if (editingId){
         await apiFetch('/api/admin/offers/' + encodeURIComponent(editingId), { method: 'PUT', body: JSON.stringify(payload) });
-        toast('Offerta aggiornata.');
+        toast('Offerta aggiornata e clienti avvisati.');
       } else {
         await apiFetch('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) });
         toast('Offerta creata: notifica inviata a tutti gli iscritti.');
