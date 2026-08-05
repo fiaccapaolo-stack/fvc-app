@@ -174,7 +174,7 @@
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
       <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
-    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack”. Poi pubblica il catalogo una sola volta.</p>
+    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate solo le offerte smartphone a 30 rate con Codice Fin FN07S o FN07U, escludendo i prodotti con dicitura “pack”. Poi pubblica il catalogo una sola volta.</p>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
@@ -671,6 +671,11 @@
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
       const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      const codeFinCol = guessColumn(headers, ['codice fin', 'codice finanziamento']);
+      if (!codeFinCol) {
+        toast('Il listino non contiene la colonna “Codice Fin” richiesta per l’importazione.', true);
+        return;
+      }
       let rows = raw.slice(headerRowIdx + 1)
         .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
         .map(r => {
@@ -691,7 +696,7 @@
 
       // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
       // listino il cui nome prodotto contiene (o e' contenuto in) il nome
-      // dello smartphone. Mostriamo solo 30 rate ed escludiamo i "pack".
+      // dello smartphone. Mostriamo solo 30 rate FN07S/FN07U senza "pack".
       const smartphones = config.products.smartphone || [];
       bulkRateResults = [];
       smartphones.forEach((product, idx) => {
@@ -699,7 +704,8 @@
           const rname = String(r[nameCol] || '');
           if (!productNamesMatch(rname, product.name)) return false;
           const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-          return m === 30 && !/\bpack\b/i.test(rname);
+          const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
+          return m === 30 && !/\bpack\b/i.test(rname) && (codeFin === 'FN07S' || codeFin === 'FN07U');
         });
         if (matches.length === 0) return;
         const uniqueMatches = matches.filter((r, matchIndex) =>
@@ -799,6 +805,11 @@
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
       const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      const codeFinCol = guessColumn(headers, ['codice fin', 'codice finanziamento']);
+      if (!codeFinCol) {
+        toast('Il listino non contiene la colonna “Codice Fin” richiesta per l’importazione.', true);
+        return;
+      }
       let rows = raw.slice(headerRowIdx + 1)
         .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
         .map(r => {
@@ -856,14 +867,16 @@
     const discountPctCol = guessColumn(rateListHeaders, ['sconto %', 'sconto%']);
     const discountCol = guessColumn(rateListHeaders, ['sconto']);
     const totalCol = guessColumn(rateListHeaders, ['valore_rt', 'valore rt']);
+    const codeFinCol = guessColumn(rateListHeaders, ['codice fin', 'codice finanziamento']);
 
-    // Ci interessano solo le rate a 30 mesi, escludendo i prodotti "pack".
+    // Ci interessano solo le rate a 30 mesi FN07S/FN07U, senza "pack".
     const allMatches = query
       ? rateListRows.filter(r => productNamesMatch(r[nameCol], query))
       : [];
     const matches = allMatches.filter(r => {
       const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-      return m === 30 && !/\bpack\b/i.test(String(r[nameCol] || ''));
+      const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
+      return m === 30 && !/\bpack\b/i.test(String(r[nameCol] || '')) && (codeFin === 'FN07S' || codeFin === 'FN07U');
     });
     const uniqueMatches = matches.filter((r, matchIndex) =>
       matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
@@ -875,7 +888,7 @@
       return;
     }
     if (matches.length === 0) {
-      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate senza dicitura “pack” per questa ricerca.</p>';
+      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate con codice FN07S/FN07U e senza dicitura “pack” per questa ricerca.</p>';
       return;
     }
     wrap.innerHTML = uniqueMatches.slice(0, 40).map((r, i) => {
@@ -897,7 +910,7 @@
       `;
     }).join('') + (uniqueMatches.length > 40 ? `<p class="hint">Mostrati i primi 40 di ${uniqueMatches.length} risultati — restringi la ricerca per vedere gli altri.</p>` : '');
     window._rateMatchesCurrent = uniqueMatches;
-    window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol };
+    window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol, codeFinCol };
   }
   document.getElementById('rate-search').addEventListener('input', renderRateMatches);
   document.getElementById('cancel-rate-import').addEventListener('click', () => {
