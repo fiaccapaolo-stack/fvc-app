@@ -703,14 +703,12 @@
         const matches = rows.filter(r => {
           const rname = String(r[nameCol] || '');
           if (!productNamesMatch(rname, product.name)) return false;
-          const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+          const m = parseInstallmentMonths(r[monthsCol]);
           const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
           return m === 30 && !/\bpack\b/i.test(rname) && (codeFin === 'FN07S' || codeFin === 'FN07U');
         });
         if (matches.length === 0) return;
-        const uniqueMatches = matches.filter((r, matchIndex) =>
-          matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
-        );
+        const uniqueMatches = uniqueRateRows(matches, codeFinCol);
         const installments = uniqueMatches.map(r => {
           const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
           const amount = amountCol ? String(r[amountCol] || '').trim() : '';
@@ -856,7 +854,32 @@
   function productNamesMatch(sourceName, catalogName){
     const source = normalizeProductName(sourceName);
     const catalog = normalizeProductName(catalogName);
-    return !!source && !!catalog && (source.includes(catalog) || catalog.includes(source));
+    if (!source || !catalog) return false;
+    const position = source.indexOf(catalog);
+    if (position < 0) return false;
+    // Dopo il modello ammettiamo solo taglio di memoria (es. 256GB),
+    // variante _SV o fine testo: cosi' "iPhone 17" non prende 17e/Pro/Max.
+    const suffix = source.slice(position + catalog.length);
+    return suffix === '' || suffix === 'sv' || /^\d/.test(suffix);
+  }
+
+  function parseInstallmentMonths(value){
+    const match = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/);
+    return match ? Math.round(Number(match[0])) : NaN;
+  }
+
+  // FN07S e FN07U spesso descrivono la stessa rata. Li consideriamo uguali
+  // quando tutti gli altri dati della riga coincidono, evitando doppioni.
+  function uniqueRateRows(rows, codeFinCol){
+    const seen = new Set();
+    return rows.filter(row => {
+      const comparable = { ...row };
+      delete comparable[codeFinCol];
+      const key = JSON.stringify(comparable);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   function renderRateMatches(){
@@ -874,13 +897,11 @@
       ? rateListRows.filter(r => productNamesMatch(r[nameCol], query))
       : [];
     const matches = allMatches.filter(r => {
-      const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+      const m = parseInstallmentMonths(r[monthsCol]);
       const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
       return m === 30 && !/\bpack\b/i.test(String(r[nameCol] || '')) && (codeFin === 'FN07S' || codeFin === 'FN07U');
     });
-    const uniqueMatches = matches.filter((r, matchIndex) =>
-      matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
-    );
+    const uniqueMatches = uniqueRateRows(matches, codeFinCol);
 
     const wrap = document.getElementById('rate-import-matches');
     if (!query) {
