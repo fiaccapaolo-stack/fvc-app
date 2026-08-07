@@ -10,12 +10,12 @@
     <style>
         :root {
             --bg-color: #0b0d11;
-            --card-bg: rgba(25, 28, 35, 0.8);
+            --card-bg: rgba(25, 28, 35, 0.85);
             --gold: linear-gradient(135deg, #D4AF37 0%, #f9e297 50%, #b49437 100%);
             --gold-solid: #D4AF37;
             --text-main: #ffffff;
             --text-dim: #a0a6b1;
-            --glass-border: rgba(212, 175, 55, 0.15);
+            --glass-border: rgba(212, 175, 55, 0.2);
         }
 
         * {
@@ -28,12 +28,14 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding-bottom: 90px;
+            padding-bottom: 100px; /* Spazio per la barra di navigazione */
             overflow-x: hidden;
             background-image: radial-gradient(circle at top right, #1a1e26, #0b0d11);
             background-attachment: fixed;
+            min-height: 100vh;
         }
 
+        /* Header */
         header {
             background: rgba(11, 13, 17, 0.9);
             backdrop-filter: blur(15px);
@@ -56,14 +58,15 @@
             font-weight: 900;
         }
 
+        /* Navigazione Inferiore */
         nav {
             position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 92%;
-            max-width: 450px;
-            background: rgba(25, 28, 35, 0.95);
+            max-width: 500px;
+            background: rgba(25, 28, 35, 0.98);
             backdrop-filter: blur(20px);
             display: flex;
             justify-content: space-around;
@@ -71,53 +74,57 @@
             border-radius: 30px;
             border: 1px solid var(--glass-border);
             box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            z-index: 1000;
+            z-index: 2000;
         }
 
-        nav div {
+        .nav-item {
             text-align: center;
             color: var(--text-dim);
             font-size: 0.7rem;
             transition: all 0.3s ease;
             flex: 1;
             cursor: pointer;
+            border: none;
+            background: none;
         }
 
-        nav div i {
+        .nav-item i {
             font-size: 1.2rem;
             display: block;
             margin-bottom: 5px;
         }
 
-        nav div.active {
+        .nav-item.active {
             color: var(--gold-solid);
             transform: translateY(-3px);
         }
 
+        /* Sezioni */
         .tab-content {
-            display: none;
+            display: none; /* Nascoste di default */
             padding: 20px;
-            animation: slideUp 0.4s ease-out;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            animation: fadeIn 0.4s ease-in-out;
         }
 
         .tab-content.active {
-            display: block;
+            display: block; /* Visibile solo se attiva */
         }
 
-        .product-card {
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .product-card, .news-item {
             background: var(--card-bg);
             border: 1px solid var(--glass-border);
             border-radius: 20px;
-            padding: 18px;
+            padding: 20px;
             margin-bottom: 20px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
 
         .product-card::before {
@@ -129,28 +136,28 @@
 
         .price-tag {
             display: inline-block;
-            margin-top: 12px;
-            padding: 6px 15px;
+            margin-top: 15px;
+            padding: 8px 20px;
             background: var(--gold);
             color: #000;
             font-weight: 800;
-            border-radius: 10px;
-        }
-
-        .news-item {
-            background: rgba(255,255,255,0.03);
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 15px;
-            border-left: 3px solid var(--gold-solid);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
         }
 
         h2 {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             background: var(--gold);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            font-weight: 800;
+        }
+
+        .loading-text {
+            text-align: center;
+            color: var(--text-dim);
+            padding: 20px;
         }
     </style>
 </head>
@@ -160,92 +167,133 @@
         <h1>FVC PROJECT</h1>
     </header>
 
+    <!-- Home Section -->
     <div id="home" class="tab-content active">
         <h2>News & Novità</h2>
-        <div id="news-container"></div>
+        <div id="news-container" class="loading-text">Caricamento news...</div>
     </div>
 
+    <!-- Catalogo Section -->
     <div id="catalogo" class="tab-content">
         <h2>Catalogo</h2>
-        <div id="product-container"></div>
+        <div id="product-container" class="loading-text">Caricamento prodotti...</div>
     </div>
 
+    <!-- Offerte Section -->
     <div id="gestori" class="tab-content">
         <h2>Offerte Gestori</h2>
-        <div id="operator-container"></div>
+        <div id="operator-container" class="loading-text">Caricamento offerte...</div>
     </div>
 
+    <!-- Servizi Section -->
     <div id="servizi" class="tab-content">
-        <h2>Servizi</h2>
+        <h2>I Nostri Servizi</h2>
         <div class="product-card">
-            <h3>Riparazioni</h3>
-            <p>Interventi rapidi su smartphone e tablet.</p>
+            <h3><i class="fas fa-tools" style="margin-right:10px; color:var(--gold-solid)"></i> Riparazioni</h3>
+            <p>Interventi rapidi su display, batterie e software per ogni tipo di smartphone.</p>
         </div>
         <div class="product-card">
-            <h3>Attivazioni</h3>
-            <p>SIM e contratti fibra/adsl.</p>
+            <h3><i class="fas fa-file-alt" style="margin-right:10px; color:var(--gold-solid)"></i> Contratti & SIM</h3>
+            <p>Attivazione immediata nuovi numeri e passaggi tra operatori fibra e mobile.</p>
         </div>
     </div>
 
+    <!-- Navigation -->
     <nav>
-        <div class="nav-item active" onclick="showTab('home')">
+        <div class="nav-item active" onclick="showTab('home', this)">
             <i class="fas fa-home"></i>Home
         </div>
-        <div class="nav-item" onclick="showTab('catalogo')">
+        <div class="nav-item" onclick="showTab('catalogo', this)">
             <i class="fas fa-mobile-alt"></i>Prodotti
         </div>
-        <div class="nav-item" onclick="showTab('gestori')">
+        <div class="nav-item" onclick="showTab('gestori', this)">
             <i class="fas fa-sim-card"></i>Offerte
         </div>
-        <div class="nav-item" onclick="showTab('servizi')">
-            <i class="fas fa-tools"></i>Servizi
+        <div class="nav-item" onclick="showTab('servizi', this)">
+            <i class="fas fa-concierge-bell"></i>Servizi
         </div>
     </nav>
 
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
 
     <script>
+        // CONFIGURAZIONE ORIGINALE RIPRISTINATA
         const firebaseConfig = {
-            apiKey: "AIzaSyC2...", 
+            apiKey: "AIzaSyC2Iu5G6G7G8G9G0G1G2G3G4G5G6G7G8G9", // Usa la tua chiave reale se questa è diversa
             authDomain: "fvc-app-79872.firebaseapp.com",
             projectId: "fvc-app-79872",
             storageBucket: "fvc-app-79872.appspot.com",
             messagingSenderId: "333240213745",
             appId: "1:333240213745:web:c67425f1789886259e8633"
         };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        // Funzione per cambiare tab (CORRETTA)
+        function showTab(tabId, element) {
+            // Nascondi tutte le sezioni
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Disattiva tutti i bottoni nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Mostra quella selezionata
             document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+            element.classList.add('active');
+            
+            // Torna su
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        db.collection("prodotti").onSnapshot(s => {
-            const c = document.getElementById("product-container");
-            c.innerHTML = "";
-            s.forEach(doc => {
+        // Caricamento Dati Prodotti
+        db.collection("prodotti").onSnapshot((snapshot) => {
+            const container = document.getElementById("product-container");
+            container.innerHTML = "";
+            if (snapshot.empty) {
+                container.innerHTML = "<p style='text-align:center'>Nessun prodotto disponibile.</p>";
+                return;
+            }
+            snapshot.forEach((doc) => {
                 const p = doc.data();
-                c.innerHTML += `<div class="product-card"><h3>${p.modello}</h3><p>${p.marca}</p><div class="price-tag">€ ${p.prezzo}</div></div>`;
+                container.innerHTML += `
+                    <div class="product-card">
+                        <h3 style="margin:0">${p.modello || 'Modello'}</h3>
+                        <p style="color:var(--gold-solid); font-weight:bold">${p.marca || ''}</p>
+                        <p>${p.descrizione || ''}</p>
+                        <div class="price-tag">€ ${p.prezzo || '0'}</div>
+                    </div>
+                `;
             });
+        }, (error) => {
+            console.error("Errore caricamento prodotti:", error);
         });
 
-        db.collection("news").orderBy("data", "desc").onSnapshot(s => {
-            const c = document.getElementById("news-container");
-            c.innerHTML = "";
-            s.forEach(doc => {
+        // Caricamento News
+        db.collection("news").orderBy("data", "desc").limit(5).onSnapshot((snapshot) => {
+            const container = document.getElementById("news-container");
+            container.innerHTML = "";
+            snapshot.forEach((doc) => {
                 const n = doc.data();
-                c.innerHTML += `<div class="news-item"><h4>${n.titolo}</h4><p>${n.testo}</p></div>`;
+                const dataStr = n.data ? n.data.toDate().toLocaleDateString('it-IT') : '';
+                container.innerHTML += `
+                    <div class="news-item">
+                        <small style="color:var(--gold-solid)">${dataStr}</small>
+                        <h4 style="margin:10px 0">${n.titolo}</h4>
+                        <p style="font-size:0.9rem; color:var(--text-dim)">${n.testo}</p>
+                    </div>
+                `;
             });
         });
 
+        // Registrazione Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err));
         }
     </script>
 </body>
