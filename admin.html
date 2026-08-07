@@ -174,9 +174,11 @@
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
       <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
-    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate solo le offerte smartphone a 30 rate con Codice Fin FN07S o FN07U, escludendo i prodotti con dicitura “pack”. Poi pubblica il catalogo una sola volta.</p>
+    <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel (Samsung, Apple, Xiaomi, Oppo, Realme, Honor)</button>
+    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack” o “_sv”. Poi pubblica il catalogo una sola volta.</p>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
+    <input type="file" id="brand-import-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
     <div class="card" id="bulk-rate-card" style="display:none; margin-top:12px;">
       <p class="section-title" style="margin-top:0;">Aggiornamento rate in blocco</p>
@@ -185,6 +187,16 @@
       <div class="form-actions">
         <button class="secondary" id="cancel-bulk-rate">Annulla</button>
         <button id="confirm-bulk-rate">Aggiorna e pubblica</button>
+      </div>
+    </div>
+
+    <div class="card" id="brand-import-card" style="display:none; margin-top:12px;">
+      <p class="section-title" style="margin-top:0;">Popolamento catalogo da Excel</p>
+      <p class="hint" id="brand-import-summary"></p>
+      <div id="brand-import-preview" style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px; max-height:280px; overflow-y:auto;"></div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-brand-import">Annulla</button>
+        <button id="confirm-brand-import">Crea/aggiorna prodotti</button>
       </div>
     </div>
 
@@ -671,11 +683,6 @@
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
       const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
-      const codeFinCol = guessColumn(headers, ['codice fin', 'codice finanziamento']);
-      if (!codeFinCol) {
-        toast('Il listino non contiene la colonna “Codice Fin” richiesta per l’importazione.', true);
-        return;
-      }
       let rows = raw.slice(headerRowIdx + 1)
         .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
         .map(r => {
@@ -696,19 +703,20 @@
 
       // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
       // listino il cui nome prodotto contiene (o e' contenuto in) il nome
-      // dello smartphone. Mostriamo solo 30 rate FN07S/FN07U senza "pack".
+      // dello smartphone. Mostriamo solo 30 rate ed escludiamo i "pack".
       const smartphones = config.products.smartphone || [];
       bulkRateResults = [];
       smartphones.forEach((product, idx) => {
         const matches = rows.filter(r => {
           const rname = String(r[nameCol] || '');
           if (!productNamesMatch(rname, product.name)) return false;
-          const m = parseInstallmentMonths(r[monthsCol]);
-          const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
-          return m === 30 && !/\bpack\b/i.test(rname) && (codeFin === 'FN07S' || codeFin === 'FN07U');
+          const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+          return m === 30 && !isExcludedProductName(rname);
         });
         if (matches.length === 0) return;
-        const uniqueMatches = uniqueRateRows(matches, codeFinCol);
+        const uniqueMatches = matches.filter((r, matchIndex) =>
+          matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+        );
         const installments = uniqueMatches.map(r => {
           const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
           const amount = amountCol ? String(r[amountCol] || '').trim() : '';
@@ -759,6 +767,142 @@
     toast(`Rate aggiornate per ${bulkRateResults.length} smartphone. Pubblica il catalogo quando hai finito.`);
   });
 
+  // ---- popola il catalogo Smartphone da Excel, solo per i marchi scelti ----
+  const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
+  let brandImportResults = []; // { name, spec, price, installments, existingIndex }
+
+  document.getElementById('brand-import-btn').addEventListener('click', () => {
+    document.getElementById('brand-import-excel-input').click();
+  });
+
+  document.getElementById('brand-import-excel-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Libreria di lettura Excel non disponibile.', true);
+      return;
+    }
+    try {
+      const workbook = await readWorkbookSmart(file);
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
+      let headerRowIdx = 0, maxCount = -1;
+      for (let i = 0; i < Math.min(20, raw.length); i++) {
+        const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
+        if (count > maxCount) { maxCount = count; headerRowIdx = i; }
+      }
+      const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      let rows = raw.slice(headerRowIdx + 1)
+        .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+          return obj;
+        });
+      if (rows.length > 20000) rows = rows.slice(0, 20000);
+
+      const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
+      const priceCol = guessColumn(headers, ['pap', 'prezzo', 'listino']);
+      const gammaCol = guessColumn(headers, ['gamma']);
+      const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
+      const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+      const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
+      const discountCol = guessColumn(headers, ['sconto']);
+      const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
+
+      // Solo i marchi scelti, niente "pack", solo le righe a 30 rate.
+      const filtered = rows.filter(r => {
+        const rname = String(r[nameCol] || '').toLowerCase();
+        if (!rname) return false;
+        if (isExcludedProductName(rname)) return false;
+        if (!BRAND_KEYWORDS.some(b => rname.includes(b))) return false;
+        const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+        return m === 30;
+      });
+
+      if (filtered.length === 0) {
+        toast('Nessun prodotto trovato per i marchi selezionati con rata a 30 mesi.', true);
+        return;
+      }
+
+      // Raggruppiamo per nome prodotto (normalizzato), cosi' se lo stesso
+      // modello compare piu' volte prendiamo solo la prima occorrenza utile.
+      const grouped = new Map();
+      filtered.forEach(r => {
+        const key = normalizeProductName(r[nameCol]);
+        if (!grouped.has(key)) grouped.set(key, r);
+      });
+
+      const smartphones = config.products.smartphone || [];
+      brandImportResults = [...grouped.values()].map(r => {
+        const rawName = String(r[nameCol] || '').trim();
+        const price = priceCol ? parseFlexibleNumber(r[priceCol]) : null;
+        const spec = gammaCol ? String(r[gammaCol] || '').trim() : '';
+        const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
+        const amount = amountCol ? String(r[amountCol] || '').trim() : '';
+        const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+        const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
+        const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
+        const installments = (months || amount) ? [{
+          months: months ? `${months} rate` : '',
+          amount: amount ? `${amount}€/mese` : '',
+          total: totalVal ? `${totalVal.toFixed(2)}€` : '',
+          discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
+        }] : [];
+        const existingIndex = smartphones.findIndex(p => productNamesMatch(p.name, rawName));
+        return {
+          name: rawName,
+          spec,
+          price: price !== null ? `${price.toFixed(2)}€` : '',
+          installments,
+          existingIndex
+        };
+      });
+
+      const newCount = brandImportResults.filter(r => r.existingIndex < 0).length;
+      const updateCount = brandImportResults.length - newCount;
+      document.getElementById('brand-import-summary').textContent =
+        `Trovati ${brandImportResults.length} smartphone tra i marchi selezionati: ${newCount} nuovi, ${updateCount} già presenti (verranno aggiornati prezzo e rata).`;
+      document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r =>
+        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments[0].months} da ${r.installments[0].amount}` : ''}`
+      ).join('<br>');
+      document.getElementById('brand-import-card').style.display = 'block';
+      document.getElementById('brand-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      toast('Errore nella lettura del file: ' + err.message, true);
+    }
+    e.target.value = '';
+  });
+
+  document.getElementById('cancel-brand-import').addEventListener('click', () => {
+    document.getElementById('brand-import-card').style.display = 'none';
+  });
+
+  document.getElementById('confirm-brand-import').addEventListener('click', async () => {
+    if (!config.products.smartphone) config.products.smartphone = [];
+    brandImportResults.forEach(r => {
+      if (r.existingIndex >= 0) {
+        const existing = config.products.smartphone[r.existingIndex];
+        existing.price = r.price || existing.price;
+        if (r.installments.length) existing.installments = r.installments;
+      } else {
+        config.products.smartphone.push({
+          name: r.name,
+          spec: r.spec,
+          price: r.price || 'Prezzo da definire',
+          stock: 3,
+          image: '',
+          installments: r.installments
+        });
+      }
+    });
+    document.getElementById('brand-import-card').style.display = 'none';
+    if (currentCat === 'smartphone') renderProducts();
+    setCatalogDirty(true);
+    toast(`Catalogo aggiornato: ${brandImportResults.length} smartphone pronti. Pubblica il catalogo quando hai finito.`);
+  });
+
   document.getElementById('cancel-product').addEventListener('click', () => {
     document.getElementById('product-form-card').style.display = 'none';
   });
@@ -803,11 +947,6 @@
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
       const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
-      const codeFinCol = guessColumn(headers, ['codice fin', 'codice finanziamento']);
-      if (!codeFinCol) {
-        toast('Il listino non contiene la colonna “Codice Fin” richiesta per l’importazione.', true);
-        return;
-      }
       let rows = raw.slice(headerRowIdx + 1)
         .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
         .map(r => {
@@ -843,6 +982,13 @@
   // I listini non usano sempre lo stesso formato: ad esempio "iPhone17"
   // puo' corrispondere a "iPhone 17" nel catalogo. Per il confronto
   // ignoriamo spazi, trattini, underscore e altri separatori.
+  // Alcuni nomi nel listino vanno sempre esclusi: i pacchetti/bundle
+  // ("... Pack ...") e le varianti con dicitura "_sv" (es. "iPhone 15_sv").
+  function isExcludedProductName(name){
+    const n = String(name || '');
+    return /\bpack\b/i.test(n) || /_sv\b/i.test(n);
+  }
+
   function normalizeProductName(value){
     return String(value || '')
       .toLowerCase()
@@ -854,32 +1000,7 @@
   function productNamesMatch(sourceName, catalogName){
     const source = normalizeProductName(sourceName);
     const catalog = normalizeProductName(catalogName);
-    if (!source || !catalog) return false;
-    const position = source.indexOf(catalog);
-    if (position < 0) return false;
-    // Dopo il modello ammettiamo solo taglio di memoria (es. 256GB),
-    // variante _SV o fine testo: cosi' "iPhone 17" non prende 17e/Pro/Max.
-    const suffix = source.slice(position + catalog.length);
-    return suffix === '' || suffix === 'sv' || /^\d/.test(suffix);
-  }
-
-  function parseInstallmentMonths(value){
-    const match = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/);
-    return match ? Math.round(Number(match[0])) : NaN;
-  }
-
-  // FN07S e FN07U spesso descrivono la stessa rata. Li consideriamo uguali
-  // quando tutti gli altri dati della riga coincidono, evitando doppioni.
-  function uniqueRateRows(rows, codeFinCol){
-    const seen = new Set();
-    return rows.filter(row => {
-      const comparable = { ...row };
-      delete comparable[codeFinCol];
-      const key = JSON.stringify(comparable);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return !!source && !!catalog && (source.includes(catalog) || catalog.includes(source));
   }
 
   function renderRateMatches(){
@@ -890,18 +1011,18 @@
     const discountPctCol = guessColumn(rateListHeaders, ['sconto %', 'sconto%']);
     const discountCol = guessColumn(rateListHeaders, ['sconto']);
     const totalCol = guessColumn(rateListHeaders, ['valore_rt', 'valore rt']);
-    const codeFinCol = guessColumn(rateListHeaders, ['codice fin', 'codice finanziamento']);
 
-    // Ci interessano solo le rate a 30 mesi FN07S/FN07U, senza "pack".
+    // Ci interessano solo le rate a 30 mesi, escludendo i prodotti "pack".
     const allMatches = query
       ? rateListRows.filter(r => productNamesMatch(r[nameCol], query))
       : [];
     const matches = allMatches.filter(r => {
-      const m = parseInstallmentMonths(r[monthsCol]);
-      const codeFin = String(r[codeFinCol] || '').trim().toUpperCase();
-      return m === 30 && !/\bpack\b/i.test(String(r[nameCol] || '')) && (codeFin === 'FN07S' || codeFin === 'FN07U');
+      const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+      return m === 30 && !isExcludedProductName(r[nameCol]);
     });
-    const uniqueMatches = uniqueRateRows(matches, codeFinCol);
+    const uniqueMatches = matches.filter((r, matchIndex) =>
+      matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+    );
 
     const wrap = document.getElementById('rate-import-matches');
     if (!query) {
@@ -909,7 +1030,7 @@
       return;
     }
     if (matches.length === 0) {
-      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate con codice FN07S/FN07U e senza dicitura “pack” per questa ricerca.</p>';
+      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate (esclusi “pack” e “_sv”) per questa ricerca.</p>';
       return;
     }
     wrap.innerHTML = uniqueMatches.slice(0, 40).map((r, i) => {
@@ -931,7 +1052,7 @@
       `;
     }).join('') + (uniqueMatches.length > 40 ? `<p class="hint">Mostrati i primi 40 di ${uniqueMatches.length} risultati — restringi la ricerca per vedere gli altri.</p>` : '');
     window._rateMatchesCurrent = uniqueMatches;
-    window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol, codeFinCol };
+    window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol };
   }
   document.getElementById('rate-search').addEventListener('input', renderRateMatches);
   document.getElementById('cancel-rate-import').addEventListener('click', () => {
