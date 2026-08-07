@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FVC_ADMIN_BUILD: v4-notify-fix-reset-prices -->
+<!-- FVC_ADMIN_BUILD: v4-notify-fix-with-reset-only -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -173,18 +173,18 @@
     <div id="products-list"></div>
     <div class="cta-row2">
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
-      <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel</button>
+      <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
-    <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel</button>
+    <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel (Samsung, Apple, Xiaomi, Oppo, Realme, Honor)</button>
     
-    <!-- PULSANTE RESET CATALOGO -->
-    <button onclick="resetCurrentCatalog()" type="button" class="danger" style="width:100%; margin-top:8px;">🗑️ Svuota intera categoria attuale</button>
+    <!-- NUOVO TASTO RESET CATALOGO -->
+    <button onclick="resetCurrentCatalog()" type="button" class="danger" style="width:100%; margin-top:8px;">🗑️ Svuota categoria attuale (Smartphone/Accessori/Ricambi)</button>
 
+    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack” o “_sv”. Poi pubblica il catalogo una sola volta.</p>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
     <input type="file" id="brand-import-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
 
-    <!-- Card anteprima caricamento -->
     <div class="card" id="bulk-rate-card" style="display:none; margin-top:12px;">
       <p class="section-title" style="margin-top:0;">Aggiornamento rate in blocco</p>
       <p class="hint" id="bulk-rate-summary"></p>
@@ -211,9 +211,9 @@
       <input type="text" id="p-name" placeholder="iPhone 15">
       <label for="p-spec">Dettaglio (es. 128GB · Nero)</label>
       <input type="text" id="p-spec" placeholder="128GB · Nero">
-      <label for="p-price">Prezzo (es. 799€)</label>
+      <label for="p-price">Prezzo (testo libero, es. 799€ o da 39€)</label>
       <input type="text" id="p-price" placeholder="799€">
-      <label>Disponibilità</label>
+      <label>Disponibilità (barre mostrate in app)</label>
       <div class="heat-row" id="stock-row">
         <div class="heat-opt" data-v="1">1</div>
         <div class="heat-opt" data-v="2">2</div>
@@ -225,6 +225,7 @@
         <img id="p-image-preview" class="photo-preview" style="display:none;">
         <input type="file" id="p-image" accept="image/*">
       </div>
+
       <p class="section-title" style="margin-top:18px;">Rateizzazione (facoltativa)</p>
       <div id="p-installment-rows"></div>
       <div class="cta-row2">
@@ -232,6 +233,17 @@
         <button class="secondary" id="import-installments-btn" type="button">📄 Importa dal listino</button>
       </div>
       <input type="file" id="rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
+
+      <div class="card" id="rate-import-card" style="display:none; margin-top:12px;">
+        <p class="hint" id="rate-import-summary" style="margin-top:0;"></p>
+        <label for="rate-search">Cerca il modello nel listino (es. "iPhone 15")</label>
+        <input type="text" id="rate-search" placeholder="Scrivi parte del nome per filtrare">
+        <div id="rate-import-matches" style="max-height:220px; overflow-y:auto;"></div>
+        <div class="form-actions">
+          <button class="secondary" id="cancel-rate-import">Chiudi</button>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button class="secondary" id="cancel-product">Annulla</button>
         <button id="save-product">Salva prodotto</button>
@@ -245,413 +257,28 @@
       <button class="cat-tab active" data-carrier="tim">TIM</button>
       <button class="cat-tab" data-carrier="wind">WindTre</button>
       <button class="cat-tab" data-carrier="sky">Sky</button>
-      <button class="cat-tab" data-carrier="lyca">Lyca</button>
-      <button class="cat-tab" data-carrier="very">Very</button>
+      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
+      <button class="cat-tab" data-carrier="very">VeryMobile</button>
       <button class="cat-tab" data-carrier="kena">Kena</button>
     </div>
     <div id="carrier-plans-list"></div>
     <div class="cta-row2">
       <button id="add-plan-btn" type="button">+ Nuovo piano</button>
-      <button onclick="resetCurrentCarrier()" type="button" class="danger">🗑️ Svuota gestore</button>
+      <!-- NUOVO TASTO RESET GESTORE -->
+      <button onclick="resetCurrentCarrier()" type="button" class="danger">🗑️ Svuota gestore attuale</button>
     </div>
     <button id="publish-carriers-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica gestori</button>
-  </div>
 
-  <!-- ===================== OFFERTE ===================== -->
-  <div class="tabpage" id="tab-offerte">
-    <div class="cta-row2">
-        <button id="new-offer-btn" type="button">+ Nuova offerta</button>
-        <button onclick="resetAllOffers()" type="button" class="danger">🗑️ Elimina tutte</button>
-    </div>
-    <div id="offers-list"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-  // PDF Rendering e Utility originali mantenute
-  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
-    if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const page = await pdf.getPage(1);
-    const baseViewport = page.getViewport({ scale: 1 });
-    const scale = maxWidth / baseViewport.width;
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    return canvas.toDataURL('image/jpeg', 0.82);
-  }
-
-  function isPdfFile(file){
-    return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-  }
-
-  // FIX: parseFlexibleNumber potenziato per pulire i prezzi sporchi (es. "€ 1.200,50")
-  function parseFlexibleNumber(v){
-    if (v === '' || v === null || v === undefined) return null;
-    if (typeof v === 'number') return v;
-    
-    // Rimuove simboli valuta e spazi, trasforma virgola in punto
-    let s = String(v).trim()
-      .replace(/[€\s]/g, '')
-      .replace(/\./g, '') // Rimuove separatore migliaia
-      .replace(',', '.'); // Trasforma decimale in standard JS
-    
-    const n = parseFloat(s);
-    return isNaN(n) ? null : n;
-  }
-
-  async function readWorkbookSmart(file){
-    const isCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
-    if (isCsv) {
-      const text = await file.text();
-      const firstLine = text.split(/\r?\n/).find(l => l.trim().length > 0) || '';
-      const semicolons = (firstLine.match(/;/g) || []).length;
-      const commas = (firstLine.match(/,/g) || []).length;
-      const FS = semicolons > commas ? ';' : ',';
-      return XLSX.read(text, { type: 'string', FS });
-    }
-    const data = await file.arrayBuffer();
-    return XLSX.read(data, { type: 'array', sheetRows: 50000 });
-  }
-
-  let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
-
-  function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          let w = img.width, h = img.height;
-          if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
-          else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.onerror = () => reject(new Error('Immagine non valida'));
-        img.src = e.target.result;
-      };
-      reader.onerror = () => reject(new Error('Impossibile leggere il file'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  let config = null;
-  let currentCat = 'smartphone';
-  let heatValue = 2;
-  let stockValue = 2;
-  let catalogDirty = false;
-  let carriersDirty = false;
-
-  function toast(msg, isError){
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (isError ? ' error' : '');
-    setTimeout(() => t.classList.remove('show'), 2600);
-  }
-
-  async function apiFetch(url, opts = {}){
-    const res = await fetch(url, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD, ...(opts.headers||{}) }
-    });
-    if (res.status === 401) throw new Error('unauthorized');
-    if (!res.ok) { const b = await res.json().catch(()=>({})); throw new Error(b.error || 'Errore'); }
-    return res.status === 204 ? null : res.json();
-  }
-
-  // --- LOGIN ---
-  function showPanel(){
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('panel').style.display = 'block';
-    loadConfig();
-    loadOffers();
-  }
-  async function tryLogin(pwd){
-    ADMIN_PASSWORD = pwd;
-    try {
-      await apiFetch('/api/admin/check', { method: 'POST' });
-      sessionStorage.setItem('fvc_admin_pwd', pwd);
-      showPanel();
-    } catch {
-      document.getElementById('login-error').style.display = 'block';
-    }
-  }
-  document.getElementById('login-btn').addEventListener('click', () => tryLogin(document.getElementById('pwd').value));
-  document.getElementById('pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(e.target.value); });
-  if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
-
-  // --- RESET FUNCTIONS ---
-  window.resetCurrentCatalog = function() {
-    if (!confirm(`Sei sicuro di voler eliminare TUTTI i prodotti nella categoria ${currentCat}?`)) return;
-    config.products[currentCat] = [];
-    renderProducts();
-    setCatalogDirty(true);
-    toast(`Categoria ${currentCat} svuotata. Ricordati di pubblicare.`);
-  }
-
-  window.resetCurrentCarrier = function() {
-    if (!confirm(`Sei sicuro di voler eliminare TUTTI i piani del gestore ${currentCarrier}?`)) return;
-    config.carriers[currentCarrier] = [];
-    renderCarrierPlansList();
-    setCarriersDirty(true);
-    toast(`Gestore ${currentCarrier} svuotato. Ricordati di pubblicare.`);
-  }
-
-  window.resetAllOffers = async function() {
-    if (!confirm(`Sei sicuro di voler eliminare TUTTE le offerte attive?`)) return;
-    try {
-        const offers = await apiFetch('/api/admin/offers');
-        for (let o of offers) {
-            await apiFetch('/api/admin/offers/' + encodeURIComponent(o.id), { method: 'DELETE' });
-        }
-        loadOffers();
-        toast('Tutte le offerte sono state eliminate.');
-    } catch (err) {
-        toast('Errore nel reset offerte: ' + err.message, true);
-    }
-  }
-
-  // --- NEGOZIO ---
-  async function loadConfig(){
-    try {
-      config = await apiFetch('/api/admin/config');
-      document.getElementById('n-name').value = config.shopName || '';
-      document.getElementById('n-address').value = config.address || '';
-      document.getElementById('n-phone').value = config.phone || '';
-      document.getElementById('n-whatsapp').value = config.whatsapp || '';
-      renderHoursRows(config.hours || []);
-      renderProducts();
-      renderCarrierPlansList();
-      setCatalogDirty(false);
-      setCarriersDirty(false);
-    } catch (err) {
-      toast('Errore caricamento: ' + err.message, true);
-    }
-  }
-
-  function renderHoursRows(hours){
-    document.getElementById('hours-rows').innerHTML = (hours || []).map((h, i) => `
-      <div class="hours-row" data-i="${i}">
-        <input type="text" class="hour-label" value="${h.label || ''}" placeholder="Lunedì">
-        <input type="text" class="hour-value" value="${h.value || ''}" placeholder="9:00 - 13:00">
-        <button class="danger" type="button" onclick="removeHourRow(${i})">✕</button>
+    <div class="card" id="plan-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="pl-editing-index" value="-1">
+      <label for="pl-name">Nome piano</label>
+      <input type="text" id="pl-name" placeholder="Power Iron">
+      <label for="pl-type">Tipo</label>
+      <div class="heat-row" id="plan-type-row">
+        <div class="heat-opt" data-v="mobile">Mobile</div>
+        <div class="heat-opt" data-v="fibra">Fibra</div>
       </div>
-    `).join('');
-  }
-  window.removeHourRow = i => {
-    const h = collectHours(); h.splice(i,1); renderHoursRows(h);
-  }
-  document.getElementById('add-hour-row').addEventListener('click', () => {
-    const h = collectHours(); h.push({label:'', value:''}); renderHoursRows(h);
-  });
-  function collectHours(){
-    return [...document.querySelectorAll('.hours-row')].map(r => ({
-      label: r.querySelector('.hour-label').value.trim(),
-      value: r.querySelector('.hour-value').value.trim()
-    }));
-  }
-
-  document.getElementById('save-negozio').addEventListener('click', async () => {
-    try {
-      const payload = {
-        shopName: document.getElementById('n-name').value.trim(),
-        address: document.getElementById('n-address').value.trim(),
-        phone: document.getElementById('n-phone').value.trim(),
-        whatsapp: document.getElementById('n-whatsapp').value.trim(),
-        hours: collectHours().filter(h => h.label || h.value)
-      };
-      config = await apiFetch('/api/admin/config', { method:'PUT', body: JSON.stringify(payload) });
-      toast('Info negozio salvate.');
-    } catch (err) { toast('Errore: ' + err.message, true); }
-  });
-
-  // --- CATALOGO ---
-  document.getElementById('cat-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.cat-tab'); if(!btn) return;
-    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active'); currentCat = btn.dataset.cat; renderProducts();
-  });
-
-  function renderProducts(){
-    if(!config || !config.products) return;
-    const list = document.getElementById('products-list');
-    const items = config.products[currentCat] || [];
-    if(items.length === 0){ list.innerHTML = '<p class="hint">Nessun prodotto.</p>'; return; }
-    list.innerHTML = items.map((p, i) => `
-      <div class="card">
-        <div class="row">
-          <div><h3>${p.name}</h3><p>${p.spec || ''}</p></div>
-          <div class="pct">${p.price}</div>
-        </div>
-        <div class="actions">
-          <button class="secondary" onclick='editProduct(${i})'>Modifica</button>
-          <button class="danger" onclick="removeProduct(${i})">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function setCatalogDirty(isDirty){
-    catalogDirty = isDirty;
-    const b = document.getElementById('publish-catalog-btn');
-    b.disabled = !isDirty;
-    b.textContent = isDirty ? 'Pubblica catalogo e avvisa' : 'Catalogo aggiornato';
-  }
-
-  // FIX: guessColumn potenziato per trovare i prezzi con più nomi comuni
-  function guessColumn(headers, keywords) {
-    const lower = headers.map(h => h.toLowerCase());
-    for (const kw of keywords) {
-      const idx = lower.findIndex(h => h.includes(kw));
-      if (idx >= 0) return headers[idx];
-    }
-    return '';
-  }
-
-  // --- IMPORT EXCEL BRAND SMARTPHONE ---
-  const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor', 'motorola'];
-  let brandImportResults = [];
-
-  document.getElementById('brand-import-btn').addEventListener('click', () => {
-    document.getElementById('brand-import-excel-input').click();
-  });
-
-  document.getElementById('brand-import-excel-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    try {
-      const workbook = await readWorkbookSmart(file);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      
-      let headerIdx = 0;
-      for(let i=0; i<Math.min(10, raw.length); i++) {
-          if(raw[i].filter(c => c).length > 2) { headerIdx = i; break; }
-      }
-      const headers = raw[headerIdx].map(h => String(h||'').trim());
-      const rows = raw.slice(headerIdx + 1).map(r => {
-          let o = {}; headers.forEach((h, i) => o[h] = r[i]); return o;
-      });
-
-      const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
-      const priceCol = guessColumn(headers, ['prezzo', 'listino', 'ivato', 'pap', 'vendita', 'web', 'costo']);
-      const specCol = guessColumn(headers, ['gamma', 'variante', 'spec', 'colore']);
-
-      brandImportResults = rows.filter(r => {
-          const n = String(r[nameCol]||'').toLowerCase();
-          return BRAND_KEYWORDS.some(k => n.includes(k)) && !n.includes('pack') && !n.includes('_sv');
-      }).map(r => {
-          const pVal = parseFlexibleNumber(r[priceCol]);
-          return {
-              name: String(r[nameCol]).trim(),
-              spec: String(r[specCol]||'').trim(),
-              price: pVal ? pVal.toFixed(2) + '€' : 'Contattaci',
-              existingIndex: (config.products.smartphone || []).findIndex(p => p.name === String(r[nameCol]).trim())
-          };
-      });
-
-      document.getElementById('brand-import-summary').textContent = `Trovati ${brandImportResults.length} smartphone nel file.`;
-      document.getElementById('brand-import-preview').innerHTML = brandImportResults.slice(0, 50).map(r => 
-          `• ${r.name} -> <b>${r.price}</b>`
-      ).join('<br>') + (brandImportResults.length > 50 ? '<br>...e altri.' : '');
-      document.getElementById('brand-import-card').style.display = 'block';
-
-    } catch (err) { toast('Errore Excel: ' + err.message, true); }
-  });
-
-  document.getElementById('confirm-brand-import').addEventListener('click', () => {
-    if(!config.products.smartphone) config.products.smartphone = [];
-    brandImportResults.forEach(r => {
-        if(r.existingIndex >= 0) {
-            config.products.smartphone[r.existingIndex].price = r.price;
-        } else {
-            config.products.smartphone.push({ name: r.name, spec: r.spec, price: r.price, stock: 2, image: '', installments: [] });
-        }
-    });
-    document.getElementById('brand-import-card').style.display = 'none';
-    renderProducts(); setCatalogDirty(true);
-    toast('Prodotti aggiornati.');
-  });
-
-  // --- LOGICA SALVATAGGIO E ALTRE FUNZIONI ---
-  // (Manteniamo intatte le funzioni originali di modifica/eliminazione singola)
-  
-  window.editProduct = i => openProductForm(i);
-  window.removeProduct = i => {
-      if(!confirm('Eliminare?')) return;
-      config.products[currentCat].splice(i, 1); renderProducts(); setCatalogDirty(true);
-  }
-
-  function openProductForm(idx){
-      document.getElementById('product-form-card').style.display = 'block';
-      document.getElementById('p-editing-index').value = idx;
-      const p = idx >= 0 ? config.products[currentCat][idx] : null;
-      document.getElementById('p-name').value = p ? p.name : '';
-      document.getElementById('p-spec').value = p ? p.spec : '';
-      document.getElementById('p-price').value = p ? p.price : '';
-      productInstallments = p && p.installments ? [...p.installments] : [];
-      renderInstallmentRows();
-  }
-
-  document.getElementById('save-product').addEventListener('click', () => {
-      const idx = parseInt(document.getElementById('p-editing-index').value);
-      const p = {
-          name: document.getElementById('p-name').value.trim(),
-          spec: document.getElementById('p-spec').value.trim(),
-          price: document.getElementById('p-price').value.trim(),
-          stock: stockValue,
-          image: productImageData,
-          installments: collectInstallmentRows()
-      };
-      if(!config.products[currentCat]) config.products[currentCat] = [];
-      if(idx >= 0) config.products[currentCat][idx] = p;
-      else config.products[currentCat].push(p);
-      document.getElementById('product-form-card').style.display = 'none';
-      renderProducts(); setCatalogDirty(true);
-  });
-
-  document.getElementById('publish-catalog-btn').addEventListener('click', async () => {
-      try {
-          await apiFetch('/api/admin/config', { method:'PUT', body: JSON.stringify({ products: config.products }) });
-          setCatalogDirty(false); toast('Catalogo pubblicato.');
-      } catch (err) { toast('Errore: ' + err.message, true); }
-  });
-
-  // --- OFFERTE E ALTRI GESTORI (Mantenuti originali) ---
-  async function loadOffers(){
-    const offers = await apiFetch('/api/admin/offers');
-    const list = document.getElementById('offers-list');
-    list.innerHTML = offers.map(o => `
-      <div class="card">
-        <div class="row">
-          <div><h3>${o.title}</h3><p>${o.desc || ''}</p></div>
-          <div class="pct">${o.pct}</div>
-        </div>
-        <div class="actions">
-          <button class="danger" onclick="removeOffer('${o.id}')">Elimina</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  window.removeOffer = async id => {
-      if(!confirm('Eliminare offerta?')) return;
-      await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method:'DELETE' });
-      loadOffers();
-  }
-
-  document.getElementById('new-offer-btn').addEventListener('click', () => {
-    // Implementazione form offerta... (come nel tuo originale)
-  });
-
-</script>
-</body>
-</html>
+      <label for="pl-price">Prezzo (es. 9,99€/mese)</label>
+      <input type="text" id="pl-price" placeholder="9,99€/mese">
+      <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
+      <textarea id="pl-details" placeholder="150GB, minuti e SMS illimitati"
