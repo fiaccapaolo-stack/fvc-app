@@ -2,221 +2,167 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fvc Project Srl</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/dist/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root {
-            --bg-color: #0b0d11;
-            --card-bg: #191c23;
-            --gold: #D4AF37;
-            --text-main: #ffffff;
-            --text-dim: #a0a6b1;
-            --border: rgba(212, 175, 55, 0.3);
-        }
-
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding-bottom: 80px;
+            padding-bottom: 60px;
         }
-
         header {
-            background: #000;
-            padding: 15px;
+            background-color: #1e1e1e;
+            padding: 10px;
             text-align: center;
-            border-bottom: 2px solid var(--gold);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            border-bottom: 2px solid #D4AF37;
         }
-
         header h1 {
             margin: 0;
-            font-size: 1.2rem;
-            color: var(--gold);
-            letter-spacing: 2px;
+            color: #D4AF37;
         }
-
-        /* Navigazione */
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .product-card, .news-item, .operator-card {
+            background-color: #1e1e1e;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .product-card h3, .news-item h4 {
+            margin: 0;
+            color: #00f2ff;
+        }
+        .price {
+            font-weight: bold;
+            color: #D4AF37;
+        }
         nav {
             position: fixed;
             bottom: 0;
-            left: 0;
-            right: 0;
-            background: #000;
+            width: 100%;
+            background-color: #1e1e1e;
             display: flex;
             justify-content: space-around;
             padding: 10px 0;
-            border-top: 1px solid var(--border);
-            z-index: 2000;
+            border-top: 2px solid #D4AF37;
         }
-
-        .nav-item {
+        nav div {
             text-align: center;
-            color: var(--text-dim);
-            font-size: 0.7rem;
-            flex: 1;
+            color: #bbb;
+            font-size: 12px;
             cursor: pointer;
         }
-
-        .nav-item i {
-            font-size: 1.2rem;
+        nav div i {
+            font-size: 20px;
             display: block;
-            margin-bottom: 3px;
         }
-
-        .nav-item.active {
-            color: var(--gold);
+        nav div.active {
+            color: #D4AF37;
         }
-
-        /* Sezioni */
-        .tab-content {
-            display: none; /* Nascoste di base */
-            padding: 15px;
+        .operator-badge {
+            width: 40px;
+            height: 40px;
+            vertical-align: middle;
+            margin-right: 10px;
         }
-
-        .tab-content.active {
-            display: block; /* Solo la attiva si vede */
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid var(--border);
-        }
-
-        h2 { color: var(--gold); font-size: 1.4rem; }
-        .price { background: var(--gold); color: #000; padding: 5px 10px; border-radius: 5px; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>FVC PROJECT</h1>
-    </header>
+<header>
+    <h1>Fvc Project Srl</h1>
+</header>
 
-    <!-- Home (Sempre visibile all'inizio) -->
-    <div id="home" class="tab-content active">
-        <h2>News & Novità</h2>
-        <div id="news-container">Caricamento contenuti in corso...</div>
+<div id="home" class="tab-content active">
+    <h2>News</h2>
+    <div id="news-container">Caricamento news...</div>
+</div>
+
+<div id="catalogo" class="tab-content">
+    <h2>Catalogo</h2>
+    <div id="product-container">Caricamento prodotti...</div>
+</div>
+
+<div id="gestori" class="tab-content">
+    <h2>Offerte Gestori</h2>
+    <div id="operator-container">Caricamento offerte...</div>
+</div>
+
+<div id="servizi" class="tab-content">
+    <h2>Servizi</h2>
+    <div class="product-card">
+        <h3>Riparazioni</h3>
+        <p>Riparazione smartphone e tablet.</p>
     </div>
-
-    <!-- Catalogo -->
-    <div id="catalogo" class="tab-content">
-        <h2>Catalogo Dispositivi</h2>
-        <div id="product-container">Caricamento prodotti...</div>
+    <div class="product-card">
+        <h3>Attivazioni</h3>
+        <p>SIM e contratti fibra.</p>
     </div>
+</div>
 
-    <!-- Offerte -->
-    <div id="gestori" class="tab-content">
-        <h2>Offerte Telefonia</h2>
-        <div id="operator-container">Caricamento offerte...</div>
-    </div>
+<nav>
+    <div onclick="showTab('home')" id="nav-home" class="active"><i class="fas fa-home"></i>Home</div>
+    <div onclick="showTab('catalogo')" id="nav-catalogo"><i class="fas fa-mobile-alt"></i>Catalogo</div>
+    <div onclick="showTab('gestori')" id="nav-gestori"><i class="fas fa-sim-card"></i>Gestori</div>
+    <div onclick="showTab('servizi')" id="nav-servizi"><i class="fas fa-tools"></i>Servizi</div>
+</nav>
 
-    <!-- Servizi -->
-    <div id="servizi" class="tab-content">
-        <h2>I Nostri Servizi</h2>
-        <div class="card">
-            <h3>Riparazioni Express</h3>
-            <p>Sostituzione vetri e batterie in tempi rapidi.</p>
-        </div>
-        <div class="card">
-            <h3>SIM e Contratti</h3>
-            <p>Attivazioni mobili e fisse di tutti i gestori.</p>
-        </div>
-    </div>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
 
-    <nav>
-        <div class="nav-item active" onclick="showTab('home', this)">
-            <i class="fas fa-home"></i>Home
-        </div>
-        <div class="nav-item" onclick="showTab('catalogo', this)">
-            <i class="fas fa-mobile-alt"></i>Prodotti
-        </div>
-        <div class="nav-item" onclick="showTab('gestori', this)">
-            <i class="fas fa-sim-card"></i>Offerte
-        </div>
-        <div class="nav-item" onclick="showTab('servizi', this)">
-            <i class="fas fa-tools"></i>Servizi
-        </div>
-    </nav>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC2Iu5G6G7G8G9G0G1G2G3G4G5G6G7G8G9",
+        authDomain: "fvc-app-79872.firebaseapp.com",
+        projectId: "fvc-app-79872",
+        storageBucket: "fvc-app-79872.appspot.com",
+        messagingSenderId: "333240213745",
+        appId: "1:333240213745:web:c67425f1789886259e8633"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    <!-- Firebase v8 -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('nav div').forEach(nav => nav.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById('nav-' + tabId).classList.add('active');
+    }
 
-    <script>
-        // CONFIGURAZIONE
-        const firebaseConfig = {
-            apiKey: "AIzaSyC2Iu5G6G7G8G9G0G1G2G3G4G5G6G7G8G9", // Assicurati che questa sia corretta
-            authDomain: "fvc-app-79872.firebaseapp.com",
-            projectId: "fvc-app-79872",
-            storageBucket: "fvc-app-79872.appspot.com",
-            messagingSenderId: "333240213745",
-            appId: "1:333240213745:web:c67425f1789886259e8633"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // LOGICA NAVIGAZIONE
-        function showTab(tabId, el) {
-            // Nascondi tutto
-            const tabs = document.getElementsByClassName('tab-content');
-            for (let i = 0; i < tabs.length; i++) { tabs[i].classList.remove('active'); }
-            
-            const items = document.getElementsByClassName('nav-item');
-            for (let i = 0; i < items.length; i++) { items[i].classList.remove('active'); }
-
-            // Mostra corrente
-            document.getElementById(tabId).classList.add('active');
-            el.classList.add('active');
-            window.scrollTo(0,0);
-        }
-
-        // CARICAMENTO PRODOTTI
-        db.collection("prodotti").onSnapshot((snapshot) => {
-            const container = document.getElementById("product-container");
-            container.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const p = doc.data();
-                container.innerHTML += `
-                    <div class="card">
-                        <h3>${p.modello}</h3>
-                        <p>${p.marca}</p>
-                        <div class="price">€ ${p.prezzo}</div>
-                    </div>
-                `;
-            });
-        }, (err) => {
-            document.getElementById("product-container").innerHTML = "Errore nel caricamento dati.";
+    db.collection("prodotti").onSnapshot(snapshot => {
+        const container = document.getElementById("product-container");
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            container.innerHTML += `<div class="product-card"><h3>${p.modello}</h3><p>Marca: ${p.marca}</p><p class="price">€ ${p.prezzo}</p></div>`;
         });
+    });
 
-        // CARICAMENTO NEWS
-        db.collection("news").orderBy("data", "desc").onSnapshot((snapshot) => {
-            const container = document.getElementById("news-container");
-            container.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const n = doc.data();
-                container.innerHTML += `
-                    <div class="card">
-                        <h4>${n.titolo}</h4>
-                        <p>${n.testo}</p>
-                    </div>
-                `;
-            });
+    db.collection("news").orderBy("data", "desc").onSnapshot(snapshot => {
+        const container = document.getElementById("news-container");
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+            const n = doc.data();
+            container.innerHTML += `<div class="news-item"><h4>${n.titolo}</h4><p>${n.testo}</p></div>`;
         });
+    });
 
-        // SERVICE WORKER
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-    </script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+
 </body>
 </html>
