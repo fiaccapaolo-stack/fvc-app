@@ -197,4 +197,784 @@
       <div class="form-actions">
         <button class="secondary" id="cancel-brand-import">Annulla</button>
         <button id="confirm-brand-import">Crea/aggiorna prodotti</button>
- 
+      </div>
+    </div>
+
+    <div class="card" id="product-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="p-editing-index" value="-1">
+      <label for="p-name">Nome</label>
+      <input type="text" id="p-name" placeholder="iPhone 15">
+      <label for="p-spec">Dettaglio (es. 128GB · Nero)</label>
+      <input type="text" id="p-spec" placeholder="128GB · Nero">
+      <label for="p-price">Prezzo (testo libero, es. 799€ o da 39€)</label>
+      <input type="text" id="p-price" placeholder="799€">
+      <label>Disponibilità (barre mostrate in app)</label>
+      <div class="heat-row" id="stock-row">
+        <div class="heat-opt" data-v="1">1</div>
+        <div class="heat-opt" data-v="2">2</div>
+        <div class="heat-opt" data-v="3">3</div>
+        <div class="heat-opt" data-v="4">4</div>
+      </div>
+      <label for="p-image">Foto (facoltativa)</label>
+      <div class="photo-row">
+        <img id="p-image-preview" class="photo-preview" style="display:none;">
+        <input type="file" id="p-image" accept="image/*">
+      </div>
+
+      <p class="section-title" style="margin-top:18px;">Rateizzazione (facoltativa)</p>
+      <div id="p-installment-rows"></div>
+      <div class="cta-row2">
+        <button class="secondary" id="add-installment-row" type="button">+ Aggiungi rata</button>
+        <button class="secondary" id="import-installments-btn" type="button">📄 Importa dal listino</button>
+      </div>
+      <input type="file" id="rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
+
+      <div class="card" id="rate-import-card" style="display:none; margin-top:12px;">
+        <p class="hint" id="rate-import-summary" style="margin-top:0;"></p>
+        <label for="rate-search">Cerca il modello nel listino (es. "iPhone 15")</label>
+        <input type="text" id="rate-search" placeholder="Scrivi parte del nome per filtrare">
+        <div id="rate-import-matches" style="max-height:220px; overflow-y:auto;"></div>
+        <div class="form-actions">
+          <button class="secondary" id="cancel-rate-import">Chiudi</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="secondary" id="cancel-product">Annulla</button>
+        <button id="save-product">Salva prodotto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GESTORI ===================== -->
+  <div class="tabpage" id="tab-gestori">
+    <div class="cat-tabs" id="carrier-cat-tabs">
+      <button class="cat-tab active" data-carrier="tim">TIM</button>
+      <button class="cat-tab" data-carrier="wind">WindTre</button>
+      <button class="cat-tab" data-carrier="sky">Sky</button>
+      <button class="cat-tab" data-carrier="lyca">Lycamobile</button>
+      <button class="cat-tab" data-carrier="very">VeryMobile</button>
+      <button class="cat-tab" data-carrier="kena">Kena</button>
+    </div>
+    <div id="carrier-plans-list"></div>
+    <div class="cta-row2">
+      <button id="add-plan-btn" type="button">+ Nuovo piano</button>
+      <button id="publish-carriers-btn" type="button" class="secondary" disabled>Pubblica gestori</button>
+    </div>
+
+    <div class="card" id="plan-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="pl-editing-index" value="-1">
+      <label for="pl-name">Nome piano</label>
+      <input type="text" id="pl-name" placeholder="Power Iron">
+      <label for="pl-type">Tipo</label>
+      <div class="heat-row" id="plan-type-row">
+        <div class="heat-opt" data-v="mobile">Mobile</div>
+        <div class="heat-opt" data-v="fibra">Fibra</div>
+      </div>
+      <label for="pl-price">Prezzo (es. 9,99€/mese)</label>
+      <input type="text" id="pl-price" placeholder="9,99€/mese">
+      <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
+      <textarea id="pl-details" placeholder="150GB, minuti e SMS illimitati" rows="3"></textarea>
+      <label for="pl-image">Foto o PDF dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
+      <div class="photo-row">
+        <img id="pl-image-preview" class="photo-preview" style="display:none;">
+        <input type="file" id="pl-image" accept="image/*,.pdf,application/pdf">
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-plan">Annulla</button>
+        <button id="save-plan">Salva piano</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== OFFERTE ===================== -->
+  <div class="tabpage" id="tab-offerte">
+    <button id="new-offer-btn" type="button">+ Nuova offerta</button>
+
+    <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
+      <input type="hidden" id="f-editing-id">
+      <label for="f-id">Id univoco (solo per offerte nuove, es. black-friday-26)</label>
+      <input type="text" id="f-id" placeholder="black-friday-26">
+      <label for="f-pct">Sconto mostrato (es. -20%, 2x1, −50€)</label>
+      <input type="text" id="f-pct" placeholder="-20%">
+      <label for="f-title">Titolo</label>
+      <input type="text" id="f-title" placeholder="Sconto su tutti gli accessori">
+      <label for="f-desc">Descrizione breve</label>
+      <textarea id="f-desc" placeholder="Valido fino a fine mese, solo in negozio."></textarea>
+      <label>Livello "quanto è calda" (barre mostrate in app)</label>
+      <div class="heat-row" id="heat-row">
+        <div class="heat-opt" data-v="1">1</div>
+        <div class="heat-opt" data-v="2">2</div>
+        <div class="heat-opt" data-v="3">3</div>
+        <div class="heat-opt" data-v="4">4</div>
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-btn">Annulla</button>
+        <button id="save-btn">Salva</button>
+      </div>
+    </div>
+
+    <p class="section-title">Offerte attive</p>
+    <div id="offers-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
+    if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = maxWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.82);
+  }
+
+  function isPdfFile(file){
+    return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  }
+
+  function parseFlexibleNumber(v){
+    if (v === '' || v === null || v === undefined) return null;
+    if (typeof v === 'number') return v;
+    let s = String(v).trim();
+    if (s.includes('.') && s.includes(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',')) {
+      s = s.replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  async function readWorkbookSmart(file){
+    const isCsv = /\.csv$/i.test(file.name) || file.type === 'text/csv';
+    if (isCsv) {
+      const text = await file.text();
+      const firstLine = text.split(/\r?\n/).find(l => l.trim().length > 0) || '';
+      const semicolons = (firstLine.match(/;/g) || []).length;
+      const commas = (firstLine.match(/,/g) || []).length;
+      const FS = semicolons > commas ? ';' : ',';
+      return XLSX.read(text, { type: 'string', FS });
+    }
+    const data = await file.arrayBuffer();
+    return XLSX.read(data, { type: 'array', sheetRows: 50000 });
+  }
+
+  let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
+
+  function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
+          else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Immagine non valida'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Impossibile leggere il file'));
+      reader.readAsDataURL(file);
+    });
+  }
+  let config = null;
+  let currentCat = 'smartphone';
+  let heatValue = 2;
+  let stockValue = 2;
+  let catalogDirty = false;
+  let carriersDirty = false;
+
+  function toast(msg, isError){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  async function apiFetch(url, opts = {}){
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD, ...(opts.headers||{}) }
+    });
+    if (res.status === 401) throw new Error('unauthorized');
+    if (!res.ok) { const b = await res.json().catch(()=>({})); throw new Error(b.error || 'Errore'); }
+    return res.status === 204 ? null : res.json();
+  }
+
+  function showPanel(){
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    loadConfig();
+    loadOffers();
+  }
+  async function tryLogin(pwd){
+    ADMIN_PASSWORD = pwd;
+    try {
+      await apiFetch('/api/admin/check', { method: 'POST' });
+      sessionStorage.setItem('fvc_admin_pwd', pwd);
+      showPanel();
+    } catch {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+  document.getElementById('login-btn').addEventListener('click', () => tryLogin(document.getElementById('pwd').value));
+  document.getElementById('pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(e.target.value); });
+  if (ADMIN_PASSWORD) tryLogin(ADMIN_PASSWORD);
+
+  document.getElementById('send-notify-btn').addEventListener('click', async () => {
+    const title = document.getElementById('notify-title').value.trim();
+    const body = document.getElementById('notify-body').value.trim();
+    if (!body) { toast('Scrivi il messaggio da inviare.', true); return; }
+    if (!confirm('Inviare questa notifica a tutti i clienti iscritti?')) return;
+    try {
+      await apiFetch('/api/admin/notify', { method: 'POST', body: JSON.stringify({ title, body }) });
+      toast('Notifica inviata a tutti i clienti.');
+      document.getElementById('notify-title').value = '';
+      document.getElementById('notify-body').value = '';
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+
+  document.querySelectorAll('.tabbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabpage').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function renderHoursRows(hours){
+    document.getElementById('hours-rows').innerHTML = (hours || []).map((h, i) => `
+      <div class="hours-row" data-i="${i}">
+        <input type="text" class="hour-label" value="${h.label || ''}" placeholder="Lunedì">
+        <input type="text" class="hour-value" value="${h.value || ''}" placeholder="15:30 – 19:30">
+        <button class="danger" type="button" onclick="removeHourRow(${i})" style="padding:10px;">✕</button>
+      </div>
+    `).join('');
+  }
+  window.removeHourRow = function(i){
+    const hours = collectHours();
+    hours.splice(i, 1);
+    renderHoursRows(hours);
+  };
+  document.getElementById('add-hour-row').addEventListener('click', () => {
+    const hours = collectHours();
+    hours.push({ label: '', value: '' });
+    renderHoursRows(hours);
+  });
+  function collectHours(){
+    return [...document.querySelectorAll('.hours-row')].map(row => ({
+      label: row.querySelector('.hour-label').value.trim(),
+      value: row.querySelector('.hour-value').value.trim(),
+    }));
+  }
+
+  async function loadConfig(){
+    try {
+      config = await apiFetch('/api/admin/config');
+      document.getElementById('n-name').value = config.shopName || '';
+      document.getElementById('n-address').value = config.address || '';
+      document.getElementById('n-phone').value = config.phone || '';
+      document.getElementById('n-whatsapp').value = config.whatsapp || '';
+      renderHoursRows(config.hours || []);
+      renderProducts();
+      renderCarrierPlansList();
+      setCatalogDirty(false);
+      setCarriersDirty(false);
+    } catch (err) {
+      toast('Errore nel caricamento: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('save-negozio').addEventListener('click', async () => {
+    try {
+      const payload = {
+        shopName: document.getElementById('n-name').value.trim(),
+        address: document.getElementById('n-address').value.trim(),
+        phone: document.getElementById('n-phone').value.trim(),
+        whatsapp: document.getElementById('n-whatsapp').value.trim(),
+        hours: collectHours().filter(h => h.label || h.value),
+      };
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...payload,
+          notify: {
+            title: `${payload.shopName || 'Fvc Project'} · Negozio aggiornato`,
+            body: 'Abbiamo aggiornato le informazioni del negozio. Tocca per vedere i dettagli.'
+          }
+        })
+      });
+      toast('Info negozio salvate e clienti avvisati.');
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+
+  document.getElementById('cat-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-tab');
+    if (!btn) return;
+    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    renderProducts();
+  });
+
+  function stockDots(n){
+    let out = '';
+    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
+    return out;
+  }
+
+  function renderProducts(){
+    if (!config || !config.products) return;
+    const list = document.getElementById('products-list');
+    const items = config.products[currentCat] || [];
+    if (items.length === 0){
+      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun prodotto in questa categoria.</p>';
+      return;
+    }
+    list.innerHTML = items.map((p, i) => `
+      <div class="card">
+        <div class="row">
+          <div>
+            <h3>${p.name}</h3>
+            <p>${p.spec || ''}</p>
+          </div>
+          <div class="pct">${p.price}</div>
+        </div>
+        <div style="margin-top:8px;">${stockDots(p.stock)}</div>
+        <div class="actions">
+          <button class="secondary" onclick='editProduct(${i})'>Modifica</button>
+          <button class="danger" onclick="removeProduct(${i})">Elimina</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setCatalogDirty(isDirty){
+    catalogDirty = isDirty;
+    const button = document.getElementById('publish-catalog-btn');
+    button.disabled = !isDirty;
+    button.textContent = isDirty
+      ? 'Pubblica catalogo e avvisa i clienti'
+      : 'Catalogo già pubblicato';
+  }
+
+  function setStock(v){
+    stockValue = v;
+    document.querySelectorAll('#stock-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
+  }
+  document.getElementById('stock-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setStock(Number(opt.dataset.v));
+  });
+
+  let productImageData = '';
+  let productInstallments = [];
+
+  function renderInstallmentRows(){
+    document.getElementById('p-installment-rows').innerHTML = productInstallments.map((r, i) => `
+      <div class="installment-row" data-i="${i}" data-total="${r.total || ''}" data-discount="${r.discount || ''}">
+        <input type="text" class="inst-months" value="${r.months || ''}" placeholder="24 rate">
+        <input type="text" class="inst-amount" value="${r.amount || ''}" placeholder="33,29€/mese">
+        <button class="danger" type="button" onclick="removeInstallmentRow(${i})" style="padding:10px;">✕</button>
+        ${r.discount ? `<p class="hint" style="grid-column:1 / -1; margin:-4px 0 0;">Totale finanziato: ${r.total || '—'} · Risparmio: ${r.discount}</p>` : ''}
+      </div>
+    `).join('');
+  }
+  function collectInstallmentRows(){
+    return [...document.querySelectorAll('.installment-row')].map(row => ({
+      months: row.querySelector('.inst-months').value.trim(),
+      amount: row.querySelector('.inst-amount').value.trim(),
+      total: row.dataset.total || '',
+      discount: row.dataset.discount || '',
+    })).filter(r => r.months || r.amount);
+  }
+  window.removeInstallmentRow = function(i){
+    productInstallments = collectInstallmentRows();
+    productInstallments.splice(i, 1);
+    renderInstallmentRows();
+  };
+  document.getElementById('add-installment-row').addEventListener('click', () => {
+    productInstallments = collectInstallmentRows();
+    productInstallments.push({ months: '', amount: '' });
+    renderInstallmentRows();
+  });
+
+  function openProductForm(index){
+    document.getElementById('product-form-card').style.display = 'block';
+    document.getElementById('p-editing-index').value = index;
+    const p = index >= 0 ? config.products[currentCat][index] : null;
+    document.getElementById('p-name').value = p ? p.name : '';
+    document.getElementById('p-spec').value = p ? p.spec : '';
+    document.getElementById('p-price').value = p ? p.price : '';
+    setStock(p ? p.stock : 2);
+    productImageData = (p && p.image) ? p.image : '';
+    const preview = document.getElementById('p-image-preview');
+    if (productImageData) { preview.src = productImageData; preview.style.display = 'block'; }
+    else { preview.style.display = 'none'; }
+    document.getElementById('p-image').value = '';
+    productInstallments = (p && Array.isArray(p.installments)) ? p.installments.slice() : [];
+    renderInstallmentRows();
+    document.getElementById('rate-import-card').style.display = 'none';
+    document.getElementById('p-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
+
+  let bulkRateResults = [];
+  document.getElementById('bulk-rate-update-btn').addEventListener('click', () => {
+    document.getElementById('bulk-rate-excel-input').click();
+  });
+
+  document.getElementById('bulk-rate-excel-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const workbook = await readWorkbookSmart(file);
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
+      let headerRowIdx = 0, maxCount = -1;
+      for (let i = 0; i < Math.min(20, raw.length); i++) {
+        const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
+        if (count > maxCount) { maxCount = count; headerRowIdx = i; }
+      }
+      const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      let rows = raw.slice(headerRowIdx + 1)
+        .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+          return obj;
+        });
+      const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
+      const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
+      const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+      const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
+      const discountCol = guessColumn(headers, ['sconto']);
+      const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
+
+      const smartphones = config.products.smartphone || [];
+      bulkRateResults = [];
+      smartphones.forEach((product, idx) => {
+        const matches = rows.filter(r => {
+          const rname = String(r[nameCol] || '');
+          if (!productNamesMatch(rname, product.name)) return false;
+          const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+          return m === 30 && !isExcludedProductName(rname);
+        });
+        if (matches.length === 0) return;
+        const uniqueMatches = matches.filter((r, matchIndex) =>
+          matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+        );
+        const installments = uniqueMatches.map(r => {
+          const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
+          const amount = amountCol ? String(r[amountCol] || '').trim() : '';
+          const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+          const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
+          const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
+          return {
+            months: months ? `${months} rate` : '',
+            amount: amount ? `${amount}€/mese` : '',
+            total: totalVal ? `${totalVal.toFixed(2)}€` : '',
+            discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
+          };
+        }).filter(r => r.months || r.amount);
+        if (installments.length) {
+          bulkRateResults.push({ productIndex: idx, name: product.name, installments });
+        }
+      });
+      document.getElementById('bulk-rate-summary').textContent = `Trovate corrispondenze per ${bulkRateResults.length} smartphone.`;
+      document.getElementById('bulk-rate-preview').innerHTML = bulkRateResults.map(r => `<strong>${r.name}</strong>`).join(', ');
+      document.getElementById('bulk-rate-card').style.display = 'block';
+    } catch (err) { toast('Errore Excel: ' + err.message, true); }
+    e.target.value = '';
+  });
+
+  document.getElementById('confirm-bulk-rate').addEventListener('click', async () => {
+    bulkRateResults.forEach(r => { config.products.smartphone[r.productIndex].installments = r.installments; });
+    document.getElementById('bulk-rate-card').style.display = 'none';
+    if (currentCat === 'smartphone') renderProducts();
+    setCatalogDirty(true); toast(`Rate aggiornate.`);
+  });
+
+  const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
+  let brandImportResults = [];
+
+  document.getElementById('brand-import-btn').addEventListener('click', () => { document.getElementById('brand-import-excel-input').click(); });
+
+  document.getElementById('brand-import-excel-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const workbook = await readWorkbookSmart(file);
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      let headerRowIdx = 0, maxCount = -1;
+      for (let i = 0; i < Math.min(20, raw.length); i++) {
+        const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
+        if (count > maxCount) { maxCount = count; headerRowIdx = i; }
+      }
+      const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      let rows = raw.slice(headerRowIdx + 1).map(r => {
+          const obj = {}; headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; }); return obj;
+      });
+      const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
+      const priceCol = guessColumn(headers, ['pap', 'prezzo', 'listino']);
+      const gammaCol = guessColumn(headers, ['gamma']);
+      const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
+      const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+
+      const filtered = rows.filter(r => {
+        const rname = String(r[nameCol] || '').toLowerCase();
+        if (isExcludedProductName(rname)) return false;
+        if (!BRAND_KEYWORDS.some(b => rname.includes(b))) return false;
+        const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+        return m === 30;
+      });
+      const grouped = new Map();
+      filtered.forEach(r => { const key = normalizeProductName(r[nameCol]); if (!grouped.has(key)) grouped.set(key, r); });
+      const smartphones = config.products.smartphone || [];
+      brandImportResults = [...grouped.values()].map(r => {
+        const rawName = String(r[nameCol] || '').trim();
+        const price = priceCol ? parseFlexibleNumber(r[priceCol]) : null;
+        const spec = gammaCol ? String(r[gammaCol] || '').trim() : '';
+        const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
+        const amount = amountCol ? String(r[amountCol] || '').trim() : '';
+        const installments = (months || amount) ? [{ months: `${months} rate`, amount: `${amount}€/mese`, total: '', discount: '' }] : [];
+        const existingIndex = smartphones.findIndex(p => productNamesMatch(p.name, rawName));
+        return { name: rawName, spec, price: price !== null ? `${price.toFixed(2)}€` : '', installments, existingIndex };
+      });
+      document.getElementById('brand-import-summary').textContent = `Trovati ${brandImportResults.length} prodotti.`;
+      document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r => `<strong>${r.name}</strong>`).join(', ');
+      document.getElementById('brand-import-card').style.display = 'block';
+    } catch (err) { toast('Errore Excel: ' + err.message, true); }
+    e.target.value = '';
+  });
+
+  document.getElementById('confirm-brand-import').addEventListener('click', () => {
+    if (!config.products.smartphone) config.products.smartphone = [];
+    brandImportResults.forEach(r => {
+      if (r.existingIndex >= 0) {
+        const existing = config.products.smartphone[r.existingIndex];
+        existing.price = r.price || existing.price;
+        if (r.installments.length) existing.installments = r.installments;
+      } else {
+        config.products.smartphone.push({ name: r.name, spec: r.spec, price: r.price || 'Prezzo da definire', stock: 3, image: '', installments: r.installments });
+      }
+    });
+    document.getElementById('brand-import-card').style.display = 'none';
+    if (currentCat === 'smartphone') renderProducts();
+    setCatalogDirty(true); toast(`Catalogo aggiornato.`);
+  });
+
+  document.getElementById('cancel-product').addEventListener('click', () => { document.getElementById('product-form-card').style.display = 'none'; });
+  window.editProduct = (i) => openProductForm(i);
+
+  document.getElementById('p-image').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      productImageData = await readAndCompressImage(file);
+      const preview = document.getElementById('p-image-preview');
+      preview.src = productImageData; preview.style.display = 'block';
+    } catch (err) { toast('Errore foto: ' + err.message, true); }
+  });
+
+  let rateListRows = [];
+  let rateListHeaders = [];
+  document.getElementById('import-installments-btn').addEventListener('click', () => { document.getElementById('rate-excel-input').click(); });
+
+  document.getElementById('rate-excel-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const workbook = await readWorkbookSmart(file);
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      let headerRowIdx = 0, maxCount = -1;
+      for (let i = 0; i < Math.min(20, raw.length); i++) {
+        const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
+        if (count > maxCount) { maxCount = count; headerRowIdx = i; }
+      }
+      rateListHeaders = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      rateListRows = raw.slice(headerRowIdx + 1).map(r => {
+          const obj = {}; rateListHeaders.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; }); return obj;
+      });
+      document.getElementById('rate-import-card').style.display = 'block';
+      document.getElementById('rate-search').value = document.getElementById('p-name').value || '';
+      renderRateMatches();
+    } catch (err) { toast('Errore listino: ' + err.message, true); }
+    e.target.value = '';
+  });
+
+  function guessColumn(headers, keywords) {
+    const lower = headers.map(h => h.toLowerCase());
+    for (const kw of keywords) { const idx = lower.findIndex(h => h.includes(kw)); if (idx >= 0) return headers[idx]; }
+    return '';
+  }
+
+  function isExcludedProductName(name){
+    const n = String(name || ''); return /\bpack\b/i.test(n) || /_sv\b/i.test(n);
+  }
+
+  function normalizeProductName(value){
+    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+
+  function productNamesMatch(sourceName, catalogName){
+    const source = normalizeProductName(sourceName); const catalog = normalizeProductName(catalogName);
+    return !!source && !!catalog && (source.includes(catalog) || catalog.includes(source));
+  }
+
+  function renderRateMatches(){
+    const query = document.getElementById('rate-search').value.trim().toLowerCase();
+    const nameCol = guessColumn(rateListHeaders, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || rateListHeaders[0];
+    const monthsCol = guessColumn(rateListHeaders, ['rate (', 'n. rate', 'numero rate', 'durata']);
+    const amountCol = guessColumn(rateListHeaders, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+    const matches = rateListRows.filter(r => {
+      if (query && !productNamesMatch(r[nameCol], query)) return false;
+      const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
+      return m === 30 && !isExcludedProductName(r[nameCol]);
+    });
+    const uniqueMatches = matches.filter((r, matchIndex) => matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex);
+    const wrap = document.getElementById('rate-import-matches');
+    wrap.innerHTML = uniqueMatches.slice(0, 40).map((r, i) => {
+      const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
+      const amount = amountCol ? String(r[amountCol] || '').trim() : '';
+      return `<div class="rate-match"><span>${r[nameCol]} · ${months} rate da ${amount}€</span><button type="button" onclick="addRateMatch(${i})">+ Aggiungi</button></div>`;
+    }).join('');
+    window._rateMatchesCurrent = uniqueMatches;
+    window._rateMatchCols = { nameCol, monthsCol, amountCol };
+  }
+  document.getElementById('rate-search').addEventListener('input', renderRateMatches);
+  document.getElementById('cancel-rate-import').addEventListener('click', () => { document.getElementById('rate-import-card').style.display = 'none'; });
+
+  window.addRateMatch = function(i){
+    const row = window._rateMatchesCurrent[i];
+    const cols = window._rateMatchCols;
+    const months = String(row[cols.monthsCol] || '').trim();
+    const amount = String(row[cols.amountCol] || '').trim();
+    productInstallments = collectInstallmentRows();
+    productInstallments.push({ months: `${months} rate`, amount: `${amount}€/mese`, total: '', discount: '' });
+    renderInstallmentRows(); toast('Rata aggiunta.');
+  };
+
+  async function publishCatalog(successMsg){
+    if (!catalogDirty) return;
+    const button = document.getElementById('publish-catalog-btn');
+    button.disabled = true;
+    try {
+      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify({ products: config.products, notify: { title: `Catalogo aggiornato`, body: 'Novità nel catalogo.' } }) });
+      setCatalogDirty(false); toast(successMsg);
+    } catch (err) { button.disabled = false; toast('Errore: ' + err.message, true); }
+  }
+
+  document.getElementById('publish-catalog-btn').addEventListener('click', () => {
+    if (confirm('Pubblicare il catalogo?')) publishCatalog('Catalogo pubblicato.');
+  });
+
+  window.removeProduct = async (i) => {
+    if (!confirm('Eliminare?')) return;
+    config.products[currentCat].splice(i, 1); renderProducts(); setCatalogDirty(true);
+  };
+
+  document.getElementById('save-product').addEventListener('click', async () => {
+    const name = document.getElementById('p-name').value.trim();
+    const price = document.getElementById('p-price').value.trim();
+    if (!name || !price){ toast('Nome e prezzo obbligatori.', true); return; }
+    const product = { name, spec: document.getElementById('p-spec').value.trim(), price, stock: stockValue, image: productImageData || '', installments: collectInstallmentRows() };
+    const idx = Number(document.getElementById('p-editing-index').value);
+    if (!config.products[currentCat]) config.products[currentCat] = [];
+    if (idx >= 0) config.products[currentCat][idx] = product;
+    else config.products[currentCat].push(product);
+    document.getElementById('product-form-card').style.display = 'none';
+    renderProducts(); setCatalogDirty(true);
+  });
+
+  let currentCarrier = 'tim';
+  document.getElementById('carrier-cat-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-tab'); if (!btn) return;
+    document.querySelectorAll('#carrier-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); currentCarrier = btn.dataset.carrier; renderCarrierPlansList();
+  });
+
+  function renderCarrierPlansList(){
+    if (!config || !config.carriers) return;
+    const list = document.getElementById('carrier-plans-list');
+    const items = config.carriers[currentCarrier] || [];
+    if (items.length === 0){ list.innerHTML = '<p class="hint">Nessun piano.</p>'; return; }
+    list.innerHTML = items.map((p, i) => `
+      <div class="card">
+        ${p.isPhoto ? `<img src="${p.image}" style="width:100%;border-radius:10px;margin-bottom:8px;"><p class="hint">Foto volantino</p>` : 
+        `<div class="row"><div><h3>${p.name}</h3><p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p></div><div class="pct">${p.price}</div></div>`}
+        <div class="actions">
+          <button class="secondary" onclick='editPlan(${i})'>Modifica</button>
+          <button class="danger" onclick="removePlan(${i})">Elimina</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setCarriersDirty(isDirty){
+    carriersDirty = isDirty;
+    const button = document.getElementById('publish-carriers-btn');
+    button.disabled = !isDirty;
+    button.textContent = isDirty ? 'Pubblica gestori' : 'Gestori pubblicati';
+  }
+
+  let planTypeValue = 'mobile';
+  function setPlanType(v){
+    planTypeValue = v;
+    document.querySelectorAll('#plan-type-row .heat-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
+  }
+  document.getElementById('plan-type-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt'); if (opt) setPlanType(opt.dataset.v);
+  });
+
+  let planImageData = '';
+  function openPlanForm(index){
+    document.getElementById('plan-form-card').style.display = 'block';
+    document.getElementById('pl-editing-index').value = index;
+    const p = index >= 0 ? config.carriers[currentCarrier][index] : null;
+    document.getElementById('pl-name').value = p ? p.name : '';
+    document.getElementById('pl-price').value = p ? p.price : '';
+    document.getElementById('pl-details').value = p ? p.details : '';
+    setPlanType(p ? p.type : 'mobile');
+    planImageData = (p && p.image) ? p.image : '';
+    const preview = document.getElementById('pl-image-preview');
+    if (planImageData) { preview.src = planImageData; preview.style.display = 'block'; }
+    else { preview.style.display = 'none'; }
+    document.getElementById('pl-image').value = '';
+  }
+  document.getElementById('add-plan-btn').addEventListener('click', () => openPlanForm(-1));
+  document.getElementById('cancel-plan').addEventListener('click', () => { document.getElementById('plan-form-card').style.display = 'none'; });
+  window.editPlan = (i) => openPlanForm(i);
+
+  document.getElementById('pl-image').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      planImageData = isPdfFile(file) ? await renderPdfFirstPageToDataUrl(file, 900) : await readAndCompressImage(file, 900, 0.78);
+      const preview = document.getElementById('pl-image-preview');
+      preview.src = planImageData; preview.style.display = 'block';
+    } catch (err) { toast('Errore foto: ' + err.message, true); }
+  });
+
+  async function publishCarriers(successMsg){
+    if (!carriersDirty) re
