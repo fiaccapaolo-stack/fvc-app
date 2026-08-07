@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root{
     --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
@@ -280,6 +281,8 @@
         <img id="pl-image-preview" class="photo-preview" style="display:none;">
         <input type="file" id="pl-image" accept="image/*,.pdf,application/pdf">
       </div>
+      <button class="secondary" id="ocr-scan-btn" type="button" style="width:100%; margin-bottom:14px;">🔍 Leggi testo dal volantino (OCR)</button>
+      <p class="hint" id="ocr-status" style="display:none;"></p>
       <div class="form-actions">
         <button class="secondary" id="cancel-plan">Annulla</button>
         <button id="save-plan">Salva piano</button>
@@ -322,6 +325,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // Converte la prima pagina di un PDF in un'immagine, cosi' si puo'
+  // caricare direttamente il volantino PDF di un gestore senza doverlo
+  // prima trasformare a mano in foto.
   async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
     if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -342,6 +348,15 @@
     return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
   }
 
+  // Legge un file Excel o CSV in modo robusto:
+  // - per i CSV, indovina da solo se il separatore e' la virgola o il punto
+  //   e virgola (tipico degli export in italiano), altrimenti le colonne si
+  //   "spostano" e i numeri letti sono sbagliati;
+  // - per gli Excel, limita le righe lette per evitare che file molto
+  //   pesanti blocchino il browser.
+  // Legge un numero anche se scritto in formato italiano (virgola come
+  // decimale, es. "19,90", o con punto delle migliaia, es. "1.234,56") —
+  // frequente nei file CSV esportati da Excel in italiano.
   function parseFlexibleNumber(v){
     if (v === '' || v === null || v === undefined) return null;
     if (typeof v === 'number') return v;
@@ -371,6 +386,8 @@
 
   let ADMIN_PASSWORD = sessionStorage.getItem('fvc_admin_pwd') || '';
 
+  // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
+  // browser prima di salvarla, cosi' resta leggera per il database gratuito.
   function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -416,6 +433,7 @@
     return res.status === 204 ? null : res.json();
   }
 
+  // ---------------- LOGIN ----------------
   function showPanel(){
     document.getElementById('login').style.display = 'none';
     document.getElementById('panel').style.display = 'block';
@@ -451,6 +469,7 @@
     }
   });
 
+  // ---------------- TABS ----------------
   document.querySelectorAll('.tabbtn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
@@ -460,6 +479,7 @@
     });
   });
 
+  // ---------------- NEGOZIO ----------------
   function renderHoursRows(hours){
     document.getElementById('hours-rows').innerHTML = (hours || []).map((h, i) => `
       <div class="hours-row" data-i="${i}">
@@ -528,6 +548,7 @@
     }
   });
 
+  // ---------------- CATALOGO ----------------
   document.getElementById('cat-tabs').addEventListener('click', (e) => {
     const btn = e.target.closest('.cat-tab');
     if (!btn) return;
@@ -639,7 +660,10 @@
   }
   document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
 
-  let bulkRateResults = [];
+  // ---- aggiornamento rate in blocco: un file Excel aggiorna tutti gli
+  // smartphone del catalogo il cui nome corrisponde a una riga del listino ----
+  let bulkRateResults = []; // { productIndex, name, installments }
+
   document.getElementById('bulk-rate-update-btn').addEventListener('click', () => {
     document.getElementById('bulk-rate-excel-input').click();
   });
@@ -647,6 +671,10 @@
   document.getElementById('bulk-rate-excel-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Libreria di lettura Excel non disponibile.', true);
+      return;
+    }
     try {
       const workbook = await readWorkbookSmart(file);
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -665,13 +693,20 @@
           headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
           return obj;
         });
+      let truncated = false;
+      if (rows.length > 20000) { rows = rows.slice(0, 20000); truncated = true; }
+
       const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
       const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
       const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
       const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
       const discountCol = guessColumn(headers, ['sconto']);
       const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
+      if (truncated) toast('File molto grande: analizzate solo le prime 8000 righe con dati.');
 
+      // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
+      // listino il cui nome prodotto contiene (o e' contenuto in) il nome
+      // dello smartphone. Mostriamo solo 30 rate ed escludiamo i "pack".
       const smartphones = config.products.smartphone || [];
       bulkRateResults = [];
       smartphones.forEach((product, idx) => {
@@ -702,56 +737,106 @@
           bulkRateResults.push({ productIndex: idx, name: product.name, installments });
         }
       });
-      document.getElementById('bulk-rate-summary').textContent = `Trovate corrispondenze per ${bulkRateResults.length} smartphone.`;
-      document.getElementById('bulk-rate-preview').innerHTML = bulkRateResults.map(r => `<strong>${r.name}</strong>`).join(', ');
+
+      if (bulkRateResults.length === 0) {
+        toast('Nessuna corrispondenza trovata tra il catalogo e questo listino.', true);
+        return;
+      }
+
+      document.getElementById('bulk-rate-summary').textContent =
+        `Trovate corrispondenze per ${bulkRateResults.length} smartphone su ${smartphones.length} in catalogo.`;
+      document.getElementById('bulk-rate-preview').innerHTML = bulkRateResults.map(r =>
+        `<strong>${r.name}</strong>: ${r.installments.map(i => `${i.months} da ${i.amount}`).join(', ')}`
+      ).join('<br><br>');
       document.getElementById('bulk-rate-card').style.display = 'block';
-    } catch (err) { toast('Errore Excel: ' + err.message, true); }
+      document.getElementById('bulk-rate-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      toast('Errore nella lettura del file: ' + err.message, true);
+    }
     e.target.value = '';
   });
 
-  document.getElementById('confirm-bulk-rate').addEventListener('click', async () => {
-    bulkRateResults.forEach(r => { config.products.smartphone[r.productIndex].installments = r.installments; });
+  document.getElementById('cancel-bulk-rate').addEventListener('click', () => {
     document.getElementById('bulk-rate-card').style.display = 'none';
-    if (currentCat === 'smartphone') renderProducts();
-    setCatalogDirty(true); toast(`Rate aggiornate.`);
   });
 
-  const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
-  let brandImportResults = [];
+  document.getElementById('confirm-bulk-rate').addEventListener('click', async () => {
+    bulkRateResults.forEach(r => {
+      config.products.smartphone[r.productIndex].installments = r.installments;
+    });
+    document.getElementById('bulk-rate-card').style.display = 'none';
+    if (currentCat === 'smartphone') renderProducts();
+    setCatalogDirty(true);
+    toast(`Rate aggiornate per ${bulkRateResults.length} smartphone. Pubblica il catalogo quando hai finito.`);
+  });
 
-  document.getElementById('brand-import-btn').addEventListener('click', () => { document.getElementById('brand-import-excel-input').click(); });
+  // ---- popola il catalogo Smartphone da Excel, solo per i marchi scelti ----
+  const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
+  let brandImportResults = []; // { name, spec, price, installments, existingIndex }
+
+  document.getElementById('brand-import-btn').addEventListener('click', () => {
+    document.getElementById('brand-import-excel-input').click();
+  });
 
   document.getElementById('brand-import-excel-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Libreria di lettura Excel non disponibile.', true);
+      return;
+    }
     try {
       const workbook = await readWorkbookSmart(file);
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
       let headerRowIdx = 0, maxCount = -1;
       for (let i = 0; i < Math.min(20, raw.length); i++) {
         const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
       const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
-      let rows = raw.slice(headerRowIdx + 1).map(r => {
-          const obj = {}; headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; }); return obj;
-      });
+      let rows = raw.slice(headerRowIdx + 1)
+        .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+          return obj;
+        });
+      if (rows.length > 20000) rows = rows.slice(0, 20000);
+
       const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
       const priceCol = guessColumn(headers, ['pap', 'prezzo', 'listino']);
       const gammaCol = guessColumn(headers, ['gamma']);
       const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
       const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+      const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
+      const discountCol = guessColumn(headers, ['sconto']);
+      const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
 
+      // Solo i marchi scelti, niente "pack", solo le righe a 30 rate.
       const filtered = rows.filter(r => {
         const rname = String(r[nameCol] || '').toLowerCase();
+        if (!rname) return false;
         if (isExcludedProductName(rname)) return false;
         if (!BRAND_KEYWORDS.some(b => rname.includes(b))) return false;
         const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
         return m === 30;
       });
+
+      if (filtered.length === 0) {
+        toast('Nessun prodotto trovato per i marchi selezionati con rata a 30 mesi.', true);
+        return;
+      }
+
+      // Raggruppiamo per nome prodotto (normalizzato), cosi' se lo stesso
+      // modello compare piu' volte prendiamo solo la prima occorrenza utile.
       const grouped = new Map();
-      filtered.forEach(r => { const key = normalizeProductName(r[nameCol]); if (!grouped.has(key)) grouped.set(key, r); });
+      filtered.forEach(r => {
+        const key = normalizeProductName(r[nameCol]);
+        if (!grouped.has(key)) grouped.set(key, r);
+      });
+
       const smartphones = config.products.smartphone || [];
       brandImportResults = [...grouped.values()].map(r => {
         const rawName = String(r[nameCol] || '').trim();
@@ -759,18 +844,45 @@
         const spec = gammaCol ? String(r[gammaCol] || '').trim() : '';
         const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
         const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-        const installments = (months || amount) ? [{ months: `${months} rate`, amount: `${amount}€/mese`, total: '', discount: '' }] : [];
+        const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+        const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
+        const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
+        const installments = (months || amount) ? [{
+          months: months ? `${months} rate` : '',
+          amount: amount ? `${amount}€/mese` : '',
+          total: totalVal ? `${totalVal.toFixed(2)}€` : '',
+          discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
+        }] : [];
         const existingIndex = smartphones.findIndex(p => productNamesMatch(p.name, rawName));
-        return { name: rawName, spec, price: price !== null ? `${price.toFixed(2)}€` : '', installments, existingIndex };
+        return {
+          name: rawName,
+          spec,
+          price: price !== null ? `${price.toFixed(2)}€` : '',
+          installments,
+          existingIndex
+        };
       });
-      document.getElementById('brand-import-summary').textContent = `Trovati ${brandImportResults.length} prodotti.`;
-      document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r => `<strong>${r.name}</strong>`).join(', ');
+
+      const newCount = brandImportResults.filter(r => r.existingIndex < 0).length;
+      const updateCount = brandImportResults.length - newCount;
+      document.getElementById('brand-import-summary').textContent =
+        `Trovati ${brandImportResults.length} smartphone tra i marchi selezionati: ${newCount} nuovi, ${updateCount} già presenti (verranno aggiornati prezzo e rata).`;
+      document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r =>
+        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments[0].months} da ${r.installments[0].amount}` : ''}`
+      ).join('<br>');
       document.getElementById('brand-import-card').style.display = 'block';
-    } catch (err) { toast('Errore Excel: ' + err.message, true); }
+      document.getElementById('brand-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      toast('Errore nella lettura del file: ' + err.message, true);
+    }
     e.target.value = '';
   });
 
-  document.getElementById('confirm-brand-import').addEventListener('click', () => {
+  document.getElementById('cancel-brand-import').addEventListener('click', () => {
+    document.getElementById('brand-import-card').style.display = 'none';
+  });
+
+  document.getElementById('confirm-brand-import').addEventListener('click', async () => {
     if (!config.products.smartphone) config.products.smartphone = [];
     brandImportResults.forEach(r => {
       if (r.existingIndex >= 0) {
@@ -778,68 +890,119 @@
         existing.price = r.price || existing.price;
         if (r.installments.length) existing.installments = r.installments;
       } else {
-        config.products.smartphone.push({ name: r.name, spec: r.spec, price: r.price || 'Prezzo da definire', stock: 3, image: '', installments: r.installments });
+        config.products.smartphone.push({
+          name: r.name,
+          spec: r.spec,
+          price: r.price || 'Prezzo da definire',
+          stock: 3,
+          image: '',
+          installments: r.installments
+        });
       }
     });
     document.getElementById('brand-import-card').style.display = 'none';
     if (currentCat === 'smartphone') renderProducts();
-    setCatalogDirty(true); toast(`Catalogo aggiornato.`);
+    setCatalogDirty(true);
+    toast(`Catalogo aggiornato: ${brandImportResults.length} smartphone pronti. Pubblica il catalogo quando hai finito.`);
   });
 
-  document.getElementById('cancel-product').addEventListener('click', () => { document.getElementById('product-form-card').style.display = 'none'; });
+  document.getElementById('cancel-product').addEventListener('click', () => {
+    document.getElementById('product-form-card').style.display = 'none';
+  });
   window.editProduct = (i) => openProductForm(i);
 
   document.getElementById('p-image').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
     try {
       productImageData = await readAndCompressImage(file);
       const preview = document.getElementById('p-image-preview');
-      preview.src = productImageData; preview.style.display = 'block';
-    } catch (err) { toast('Errore foto: ' + err.message, true); }
+      preview.src = productImageData;
+      preview.style.display = 'block';
+    } catch (err) {
+      toast('Errore nel caricare la foto: ' + err.message, true);
+    }
   });
 
+  // ---- assistente importazione rate dal listino Excel, per il prodotto aperto nel form ----
   let rateListRows = [];
   let rateListHeaders = [];
-  document.getElementById('import-installments-btn').addEventListener('click', () => { document.getElementById('rate-excel-input').click(); });
+
+  document.getElementById('import-installments-btn').addEventListener('click', () => {
+    document.getElementById('rate-excel-input').click();
+  });
 
   document.getElementById('rate-excel-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Libreria di lettura Excel non disponibile.', true);
+      return;
+    }
     try {
       const workbook = await readWorkbookSmart(file);
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
+      if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
       let headerRowIdx = 0, maxCount = -1;
       for (let i = 0; i < Math.min(20, raw.length); i++) {
         const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
         if (count > maxCount) { maxCount = count; headerRowIdx = i; }
       }
-      rateListHeaders = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
-      rateListRows = raw.slice(headerRowIdx + 1).map(r => {
-          const obj = {}; rateListHeaders.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; }); return obj;
-      });
+      const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
+      let rows = raw.slice(headerRowIdx + 1)
+        .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+          return obj;
+        });
+      let truncatedSingle = false;
+      if (rows.length > 20000) { rows = rows.slice(0, 20000); truncatedSingle = true; }
+      rateListRows = rows;
+      rateListHeaders = headers;
+      document.getElementById('rate-import-summary').textContent =
+        `Listino caricato: ${rows.length} righe${truncatedSingle ? ' (file molto grande, analizzate solo le prime 8000)' : ''}. Scrivi il nome del modello per trovarlo.`;
       document.getElementById('rate-import-card').style.display = 'block';
       document.getElementById('rate-search').value = document.getElementById('p-name').value || '';
       renderRateMatches();
-    } catch (err) { toast('Errore listino: ' + err.message, true); }
+      document.getElementById('rate-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      toast('Errore nella lettura del file: ' + err.message, true);
+    }
     e.target.value = '';
   });
 
   function guessColumn(headers, keywords) {
     const lower = headers.map(h => h.toLowerCase());
-    for (const kw of keywords) { const idx = lower.findIndex(h => h.includes(kw)); if (idx >= 0) return headers[idx]; }
+    for (const kw of keywords) {
+      const idx = lower.findIndex(h => h.includes(kw));
+      if (idx >= 0) return headers[idx];
+    }
     return '';
   }
 
+  // I listini non usano sempre lo stesso formato: ad esempio "iPhone17"
+  // puo' corrispondere a "iPhone 17" nel catalogo. Per il confronto
+  // ignoriamo spazi, trattini, underscore e altri separatori.
+  // Alcuni nomi nel listino vanno sempre esclusi: i pacchetti/bundle
+  // ("... Pack ...") e le varianti con dicitura "_sv" (es. "iPhone 15_sv").
   function isExcludedProductName(name){
-    const n = String(name || ''); return /\bpack\b/i.test(n) || /_sv\b/i.test(n);
+    const n = String(name || '');
+    return /\bpack\b/i.test(n) || /_sv\b/i.test(n);
   }
 
   function normalizeProductName(value){
-    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
   }
 
   function productNamesMatch(sourceName, catalogName){
-    const source = normalizeProductName(sourceName); const catalog = normalizeProductName(catalogName);
+    const source = normalizeProductName(sourceName);
+    const catalog = normalizeProductName(catalogName);
     return !!source && !!catalog && (source.includes(catalog) || catalog.includes(source));
   }
 
@@ -848,32 +1011,74 @@
     const nameCol = guessColumn(rateListHeaders, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || rateListHeaders[0];
     const monthsCol = guessColumn(rateListHeaders, ['rate (', 'n. rate', 'numero rate', 'durata']);
     const amountCol = guessColumn(rateListHeaders, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
-    const matches = rateListRows.filter(r => {
-      if (query && !productNamesMatch(r[nameCol], query)) return false;
+    const discountPctCol = guessColumn(rateListHeaders, ['sconto %', 'sconto%']);
+    const discountCol = guessColumn(rateListHeaders, ['sconto']);
+    const totalCol = guessColumn(rateListHeaders, ['valore_rt', 'valore rt']);
+
+    // Ci interessano solo le rate a 30 mesi, escludendo i prodotti "pack".
+    const allMatches = query
+      ? rateListRows.filter(r => productNamesMatch(r[nameCol], query))
+      : [];
+    const matches = allMatches.filter(r => {
       const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
       return m === 30 && !isExcludedProductName(r[nameCol]);
     });
-    const uniqueMatches = matches.filter((r, matchIndex) => matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex);
+    const uniqueMatches = matches.filter((r, matchIndex) =>
+      matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
+    );
+
     const wrap = document.getElementById('rate-import-matches');
+    if (!query) {
+      wrap.innerHTML = '<p class="hint">Scrivi almeno una parola per cercare nel listino.</p>';
+      return;
+    }
+    if (matches.length === 0) {
+      wrap.innerHTML = '<p class="hint">Nessun risultato a 30 rate (esclusi “pack” e “_sv”) per questa ricerca.</p>';
+      return;
+    }
     wrap.innerHTML = uniqueMatches.slice(0, 40).map((r, i) => {
       const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
       const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-      return `<div class="rate-match"><span>${r[nameCol]} · ${months} rate da ${amount}€</span><button type="button" onclick="addRateMatch(${i})">+ Aggiungi</button></div>`;
-    }).join('');
+      const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
+      const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
+      let extra = '';
+      if (discountVal) {
+        const pctText = discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : '';
+        extra = ` · risparmi ${discountVal.toFixed(2)}€${pctText}`;
+      }
+      const label = `${r[nameCol]} · ${months} rate da ${amount}€/mese${extra}`;
+      return `
+        <div class="rate-match">
+          <span>${label}</span>
+          <button type="button" onclick="addRateMatch(${i})">+ Aggiungi</button>
+        </div>
+      `;
+    }).join('') + (uniqueMatches.length > 40 ? `<p class="hint">Mostrati i primi 40 di ${uniqueMatches.length} risultati — restringi la ricerca per vedere gli altri.</p>` : '');
     window._rateMatchesCurrent = uniqueMatches;
-    window._rateMatchCols = { nameCol, monthsCol, amountCol };
+    window._rateMatchCols = { nameCol, monthsCol, amountCol, discountPctCol, discountCol, totalCol };
   }
   document.getElementById('rate-search').addEventListener('input', renderRateMatches);
-  document.getElementById('cancel-rate-import').addEventListener('click', () => { document.getElementById('rate-import-card').style.display = 'none'; });
+  document.getElementById('cancel-rate-import').addEventListener('click', () => {
+    document.getElementById('rate-import-card').style.display = 'none';
+  });
 
   window.addRateMatch = function(i){
     const row = window._rateMatchesCurrent[i];
     const cols = window._rateMatchCols;
-    const months = String(row[cols.monthsCol] || '').trim();
-    const amount = String(row[cols.amountCol] || '').trim();
+    const months = cols.monthsCol ? String(row[cols.monthsCol] || '').trim() : '';
+    const amount = cols.amountCol ? String(row[cols.amountCol] || '').trim() : '';
+    const discountPct = cols.discountPctCol ? parseFlexibleNumber(row[cols.discountPctCol]) : null;
+    const discountVal = cols.discountCol ? parseFlexibleNumber(row[cols.discountCol]) : null;
+    const totalVal = cols.totalCol ? parseFlexibleNumber(row[cols.totalCol]) : null;
     productInstallments = collectInstallmentRows();
-    productInstallments.push({ months: `${months} rate`, amount: `${amount}€/mese`, total: '', discount: '' });
-    renderInstallmentRows(); toast('Rata aggiunta.');
+    productInstallments.push({
+      months: months ? `${months} rate` : '',
+      amount: amount ? `${amount}€/mese` : '',
+      total: totalVal ? `${totalVal.toFixed(2)}€` : '',
+      discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
+    });
+    renderInstallmentRows();
+    toast('Rata aggiunta al prodotto.');
   };
 
   async function publishCatalog(successMsg){
@@ -881,49 +1086,87 @@
     const button = document.getElementById('publish-catalog-btn');
     button.disabled = true;
     try {
-      config = await apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify({ products: config.products, notify: { title: `Catalogo aggiornato`, body: 'Novità nel catalogo.' } }) });
-      setCatalogDirty(false); toast(successMsg);
-    } catch (err) { button.disabled = false; toast('Errore: ' + err.message, true); }
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          products: config.products,
+          notify: {
+            title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`,
+            body: 'Ci sono novità nel catalogo: prodotti, prezzi o disponibilità aggiornati.'
+          }
+        })
+      });
+      setCatalogDirty(false);
+      toast(successMsg);
+    } catch (err) {
+      button.disabled = false;
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
   }
 
   document.getElementById('publish-catalog-btn').addEventListener('click', () => {
-    if (confirm('Pubblicare il catalogo?')) publishCatalog('Catalogo pubblicato.');
+    if (confirm('Pubblicare tutte le modifiche al catalogo e inviare una sola notifica ai clienti?')) {
+      publishCatalog('Catalogo pubblicato e clienti avvisati.');
+    }
   });
 
   window.removeProduct = async (i) => {
-    if (!confirm('Eliminare?')) return;
-    config.products[currentCat].splice(i, 1); renderProducts(); setCatalogDirty(true);
+    if (!confirm('Eliminare questo prodotto?')) return;
+    config.products[currentCat].splice(i, 1);
+    renderProducts();
+    setCatalogDirty(true);
+    toast('Modifica pronta. Pubblica il catalogo quando hai finito.');
   };
 
   document.getElementById('save-product').addEventListener('click', async () => {
     const name = document.getElementById('p-name').value.trim();
+    const spec = document.getElementById('p-spec').value.trim();
     const price = document.getElementById('p-price').value.trim();
-    if (!name || !price){ toast('Nome e prezzo obbligatori.', true); return; }
-    const product = { name, spec: document.getElementById('p-spec').value.trim(), price, stock: stockValue, image: productImageData || '', installments: collectInstallmentRows() };
+    if (!name || !price){ toast('Compila almeno nome e prezzo.', true); return; }
+    const installments = collectInstallmentRows();
+    const product = { name, spec, price, stock: stockValue, image: productImageData || '', installments };
     const idx = Number(document.getElementById('p-editing-index').value);
     if (!config.products[currentCat]) config.products[currentCat] = [];
     if (idx >= 0) config.products[currentCat][idx] = product;
     else config.products[currentCat].push(product);
     document.getElementById('product-form-card').style.display = 'none';
-    renderProducts(); setCatalogDirty(true);
+    renderProducts();
+    setCatalogDirty(true);
+    toast('Prodotto pronto. Pubblica il catalogo quando hai finito.');
   });
 
+  // ---------------- GESTORI ----------------
   let currentCarrier = 'tim';
+
   document.getElementById('carrier-cat-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.cat-tab'); if (!btn) return;
+    const btn = e.target.closest('.cat-tab');
+    if (!btn) return;
     document.querySelectorAll('#carrier-cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active'); currentCarrier = btn.dataset.carrier; renderCarrierPlansList();
+    btn.classList.add('active');
+    currentCarrier = btn.dataset.carrier;
+    renderCarrierPlansList();
   });
 
   function renderCarrierPlansList(){
     if (!config || !config.carriers) return;
     const list = document.getElementById('carrier-plans-list');
     const items = config.carriers[currentCarrier] || [];
-    if (items.length === 0){ list.innerHTML = '<p class="hint">Nessun piano.</p>'; return; }
+    if (items.length === 0){
+      list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun piano per questo gestore.</p>';
+      return;
+    }
     list.innerHTML = items.map((p, i) => `
       <div class="card">
-        ${p.isPhoto ? `<img src="${p.image}" style="width:100%;border-radius:10px;margin-bottom:8px;"><p class="hint">Foto volantino</p>` : 
-        `<div class="row"><div><h3>${p.name}</h3><p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p></div><div class="pct">${p.price}</div></div>`}
+        ${p.isPhoto
+          ? `<img src="${p.image}" style="width:100%;border-radius:10px;display:block;margin-bottom:8px;">
+             <p style="color:var(--text-dim);">Offerta caricata come foto</p>`
+          : `<div class="row">
+              <div>
+                <h3>${p.name}</h3>
+                <p>${p.type === 'fibra' ? 'Fibra' : 'Mobile'} · ${p.details || ''}</p>
+              </div>
+              <div class="pct">${p.price}</div>
+            </div>`}
         <div class="actions">
           <button class="secondary" onclick='editPlan(${i})'>Modifica</button>
           <button class="danger" onclick="removePlan(${i})">Elimina</button>
@@ -936,7 +1179,7 @@
     carriersDirty = isDirty;
     const button = document.getElementById('publish-carriers-btn');
     button.disabled = !isDirty;
-    button.textContent = isDirty ? 'Pubblica gestori' : 'Gestori pubblicati';
+    button.textContent = isDirty ? 'Pubblica gestori e avvisa' : 'Gestori già pubblicati';
   }
 
   let planTypeValue = 'mobile';
@@ -945,7 +1188,8 @@
     document.querySelectorAll('#plan-type-row .heat-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
   }
   document.getElementById('plan-type-row').addEventListener('click', (e) => {
-    const opt = e.target.closest('.heat-opt'); if (opt) setPlanType(opt.dataset.v);
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setPlanType(opt.dataset.v);
   });
 
   let planImageData = '';
@@ -962,19 +1206,245 @@
     if (planImageData) { preview.src = planImageData; preview.style.display = 'block'; }
     else { preview.style.display = 'none'; }
     document.getElementById('pl-image').value = '';
+    document.getElementById('pl-name').scrollIntoView({ behavior:'smooth', block:'center' });
   }
   document.getElementById('add-plan-btn').addEventListener('click', () => openPlanForm(-1));
-  document.getElementById('cancel-plan').addEventListener('click', () => { document.getElementById('plan-form-card').style.display = 'none'; });
+  document.getElementById('cancel-plan').addEventListener('click', () => {
+    document.getElementById('plan-form-card').style.display = 'none';
+  });
   window.editPlan = (i) => openPlanForm(i);
 
   document.getElementById('pl-image').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
     try {
-      planImageData = isPdfFile(file) ? await renderPdfFirstPageToDataUrl(file, 900) : await readAndCompressImage(file, 900, 0.78);
+      // Risoluzione piu' alta per i piani: spesso e' la foto di un volantino
+      // (anche in formato A5), e il testo deve restare leggibile.
+      planImageData = isPdfFile(file)
+        ? await renderPdfFirstPageToDataUrl(file, 900)
+        : await readAndCompressImage(file, 900, 0.78);
       const preview = document.getElementById('pl-image-preview');
-      preview.src = planImageData; preview.style.display = 'block';
-    } catch (err) { toast('Errore foto: ' + err.message, true); }
+      preview.src = planImageData;
+      preview.style.display = 'block';
+    } catch (err) {
+      toast('Errore nel caricare la foto: ' + err.message, true);
+    }
+  });
+
+  // ---- lettura del testo dal volantino (OCR), per compilare da sola
+  // nome/prezzo/dettagli. Il riconoscimento non e' perfetto: i campi
+  // restano comunque modificabili a mano dopo la lettura. ----
+  function parseOcrText(rawText){
+    const lines = rawText
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l.length > 1);
+
+    // Cerchiamo un prezzo tipo "9,99€" o "9,99 € /mese" in tutto il testo.
+    const priceMatch = rawText.match(/(\d{1,4}[.,]\d{1,2})\s*€/);
+    let price = '';
+    if (priceMatch) {
+      const hasMese = /mese/i.test(rawText.slice(Math.max(0, priceMatch.index - 5), priceMatch.index + 20));
+      price = `${priceMatch[1]}€${hasMese ? '/mese' : ''}`;
+    }
+
+    // Come nome, la riga piu' lunga tra le prime (di solito e' il titolo
+    // dell'offerta su un volantino), escludendo righe che sono solo il prezzo.
+    const candidateLines = lines.filter(l => !/^\d{1,4}[.,]?\d{0,2}\s*€?$/.test(l));
+    const name = candidateLines.length ? candidateLines.reduce((a, b) => b.length > a.length ? b : a) : '';
+
+    const details = lines.join(' · ');
+    return { name, price, details };
+  }
+
+  document.getElementById('ocr-scan-btn').addEventListener('click', async () => {
+    if (!planImageData) { toast('Carica prima una foto del volantino.', true); return; }
+    if (typeof Tesseract === 'undefined') { toast('Libreria OCR non disponibile.', true); return; }
+    const statusEl = document.getElementById('ocr-status');
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Lettura del testo in corso, qualche secondo...';
+    const btn = document.getElementById('ocr-scan-btn');
+    btn.disabled = true;
+    try {
+      const worker = await Tesseract.createWorker('ita');
+      const { data: { text } } = await worker.recognize(planImageData);
+      await worker.terminate();
+      const parsed = parseOcrText(text);
+      if (parsed.name && !document.getElementById('pl-name').value) document.getElementById('pl-name').value = parsed.name;
+      if (parsed.price && !document.getElementById('pl-price').value) document.getElementById('pl-price').value = parsed.price;
+      if (parsed.details) document.getElementById('pl-details').value = parsed.details;
+      statusEl.textContent = 'Testo letto — controlla e correggi i campi prima di salvare, l\'OCR non è sempre preciso.';
+    } catch (err) {
+      statusEl.textContent = '';
+      statusEl.style.display = 'none';
+      toast('Errore nella lettura del testo: ' + err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   async function publishCarriers(successMsg){
-    if (!carriersDirty) re
+    if (!carriersDirty) return;
+    const button = document.getElementById('publish-carriers-btn');
+    button.disabled = true;
+    try {
+      config = await apiFetch('/api/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          carriers: config.carriers,
+          notify: {
+            title: `${config.shopName || 'Fvc Project'} · Offerte aggiornate`,
+            body: 'Abbiamo aggiornato le offerte di telefonia e fibra. Tocca per scoprirle.'
+          }
+        })
+      });
+      setCarriersDirty(false);
+      toast(successMsg);
+    } catch (err) {
+      button.disabled = false;
+      toast('Errore nel pubblicare: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('publish-carriers-btn').addEventListener('click', () => {
+    if (confirm('Pubblicare tutte le modifiche ai gestori e inviare una sola notifica ai clienti?')) {
+      publishCarriers('Gestori pubblicati e clienti avvisati.');
+    }
+  });
+
+  window.removePlan = async (i) => {
+    if (!confirm('Eliminare questo piano?')) return;
+    config.carriers[currentCarrier].splice(i, 1);
+    renderCarrierPlansList();
+    setCarriersDirty(true);
+    toast('Modifica pronta. Pubblica i gestori quando hai finito.');
+  };
+
+  document.getElementById('save-plan').addEventListener('click', async () => {
+    const name = document.getElementById('pl-name').value.trim();
+    const price = document.getElementById('pl-price').value.trim();
+    const details = document.getElementById('pl-details').value.trim();
+    // Se hai caricato una foto (es. il volantino dell'offerta), non serve
+    // compilare anche gli altri campi: viene mostrata cosi' com'e'.
+    if (!planImageData && (!name || !price)) {
+      toast('Compila nome e prezzo, oppure carica una foto dell\'offerta.', true);
+      return;
+    }
+    const isPhotoOnly = !!planImageData && !name && !price;
+    const plan = {
+      name, type: planTypeValue, price, details,
+      image: planImageData || '',
+      isPhoto: isPhotoOnly
+    };
+    const idx = Number(document.getElementById('pl-editing-index').value);
+    if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
+    if (idx >= 0) config.carriers[currentCarrier][idx] = plan;
+    else config.carriers[currentCarrier].push(plan);
+    document.getElementById('plan-form-card').style.display = 'none';
+    renderCarrierPlansList();
+    setCarriersDirty(true);
+    toast('Piano pronto. Pubblica i gestori quando hai finito.');
+  });
+
+  // ---------------- OFFERTE ----------------
+  function heatDots(n){
+    let out = '';
+    for (let i=1;i<=4;i++) out += `<span style="display:inline-block;width:3px;height:${i*2.5+2}px;margin-right:2px;border-radius:1px;background:${i<=n?'var(--gold)':'var(--border)'}"></span>`;
+    return out;
+  }
+
+  async function loadOffers(){
+    try {
+      const offers = await apiFetch('/api/admin/offers');
+      const list = document.getElementById('offers-list');
+      if (offers.length === 0){
+        list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessuna offerta al momento.</p>';
+        return;
+      }
+      list.innerHTML = offers.map(o => `
+        <div class="card">
+          <div class="row">
+            <div>
+              <h3>${o.title}</h3>
+              <p>${o.desc || ''}</p>
+            </div>
+            <div class="pct">${o.pct}</div>
+          </div>
+          <div style="margin-top:8px;">${heatDots(o.heat)}</div>
+          <div class="actions">
+            <button class="secondary" onclick='editOffer(${JSON.stringify(o).replace(/'/g,"&apos;")})'>Modifica</button>
+            <button class="danger" onclick="removeOffer('${o.id}')">Elimina</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      toast('Errore nel caricamento: ' + err.message, true);
+    }
+  }
+
+  function setHeat(v){
+    heatValue = v;
+    document.querySelectorAll('#heat-row .heat-opt').forEach(el => el.classList.toggle('active', Number(el.dataset.v) === v));
+  }
+  document.getElementById('heat-row').addEventListener('click', (e) => {
+    const opt = e.target.closest('.heat-opt');
+    if (opt) setHeat(Number(opt.dataset.v));
+  });
+
+  function openForm(offer){
+    document.getElementById('offer-form-card').style.display = 'block';
+    document.getElementById('f-editing-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').value = offer ? offer.id : '';
+    document.getElementById('f-id').disabled = !!offer;
+    document.getElementById('f-pct').value = offer ? offer.pct : '';
+    document.getElementById('f-title').value = offer ? offer.title : '';
+    document.getElementById('f-desc').value = offer ? (offer.desc || '') : '';
+    setHeat(offer ? offer.heat : 2);
+    document.getElementById('f-id').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  document.getElementById('new-offer-btn').addEventListener('click', () => openForm(null));
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    document.getElementById('offer-form-card').style.display = 'none';
+  });
+  window.editOffer = (offer) => openForm(offer);
+  window.removeOffer = async (id) => {
+    if (!confirm('Eliminare questa offerta?')) return;
+    try {
+      await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method: 'DELETE' });
+      toast('Offerta eliminata.');
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  };
+
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    const editingId = document.getElementById('f-editing-id').value;
+    const payload = {
+      id: document.getElementById('f-id').value.trim(),
+      pct: document.getElementById('f-pct').value.trim(),
+      title: document.getElementById('f-title').value.trim(),
+      desc: document.getElementById('f-desc').value.trim(),
+      heat: heatValue
+    };
+    if (!payload.id || !payload.pct || !payload.title){
+      toast('Compila almeno id, sconto e titolo.', true);
+      return;
+    }
+    try {
+      if (editingId){
+        await apiFetch('/api/admin/offers/' + encodeURIComponent(editingId), { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Offerta aggiornata e clienti avvisati.');
+      } else {
+        await apiFetch('/api/admin/offers', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Offerta creata: notifica inviata a tutti gli iscritti.');
+      }
+      document.getElementById('offer-form-card').style.display = 'none';
+      loadOffers();
+    } catch (err) {
+      toast('Errore: ' + err.message, true);
+    }
+  });
+</script>
+</body>
+</html>
