@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FVC_ADMIN_BUILD: v4-notify-fix-with-resets -->
+<!-- FVC_ADMIN_BUILD: v4-notify-fix -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -177,7 +177,7 @@
     </div>
     <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel (Samsung, Apple, Xiaomi, Oppo, Realme, Honor)</button>
     
-    <!-- AGGIUNTO TASTO RESET CATALOGO -->
+    <!-- AGGIUNTA: Tasto Reset per svuotare la categoria attuale -->
     <button onclick="resetCurrentCatalog()" type="button" class="danger" style="width:100%; margin-top:8px;">🗑️ Svuota categoria attuale (Smartphone/Accessori/Ricambi)</button>
 
     <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack” o “_sv”. Poi pubblica il catalogo una sola volta.</p>
@@ -264,7 +264,7 @@
     <div id="carrier-plans-list"></div>
     <div class="cta-row2">
       <button id="add-plan-btn" type="button">+ Nuovo piano</button>
-      <!-- AGGIUNTO TASTO RESET GESTORE -->
+      <!-- AGGIUNTA: Tasto Reset per il gestore selezionato -->
       <button onclick="resetCurrentCarrier()" type="button" class="danger">🗑️ Svuota gestore attuale</button>
     </div>
     <button id="publish-carriers-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica gestori</button>
@@ -290,50 +290,4 @@
       <button class="secondary" id="ocr-scan-btn" type="button" style="width:100%; margin-bottom:14px;">🔍 Leggi testo dal volantino (OCR)</button>
       <p class="hint" id="ocr-status" style="display:none;"></p>
       <div class="form-actions">
-        <button class="secondary" id="cancel-plan">Annulla</button>
-        <button id="save-plan">Salva piano</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===================== OFFERTE ===================== -->
-  <div class="tabpage" id="tab-offerte">
-    <div class="cta-row2">
-      <button id="new-offer-btn" type="button">+ Nuova offerta</button>
-      <!-- AGGIUNTO TASTO RESET OFFERTE -->
-      <button onclick="resetAllOffers()" type="button" class="danger">🗑️ Elimina tutte le offerte</button>
-    </div>
-
-    <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
-      <input type="hidden" id="f-editing-id">
-      <label for="f-id">Id univoco (solo per offerte nuove, es. black-friday-26)</label>
-      <input type="text" id="f-id" placeholder="black-friday-26">
-      <label for="f-pct">Sconto mostrato (es. -20%, 2x1, −50€)</label>
-      <input type="text" id="f-pct" placeholder="-20%">
-      <label for="f-title">Titolo</label>
-      <input type="text" id="f-title" placeholder="Sconto su tutti gli accessori">
-      <label for="f-desc">Descrizione breve</label>
-      <textarea id="f-desc" placeholder="Valido fino a fine mese, solo in negozio."></textarea>
-      <label>Livello "quanto è calda" (barre mostrate in app)</label>
-      <div class="heat-row" id="heat-row">
-        <div class="heat-opt" data-v="1">1</div>
-        <div class="heat-opt" data-v="2">2</div>
-        <div class="heat-opt" data-v="3">3</div>
-        <div class="heat-opt" data-v="4">4</div>
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-btn">Annulla</button>
-        <button id="save-btn">Salva</button>
-      </div>
-    </div>
-
-    <p class="section-title">Offerte attive</p>
-    <div id="offers-list"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-  // PDF Rendering logic (INALTERATA)
-  async function renderP
+        <button class="secondary" id="cance
