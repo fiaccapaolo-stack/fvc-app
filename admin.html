@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root{
     --bg:#10151C; --surface:#1A222C; --surface-alt:#212B37; --border:#2B3644;
@@ -274,12 +275,14 @@
       <label for="pl-price">Prezzo (es. 9,99€/mese)</label>
       <input type="text" id="pl-price" placeholder="9,99€/mese">
       <label for="pl-details">Dettagli (es. 150GB, minuti illimitati)</label>
-      <input type="text" id="pl-details" placeholder="150GB, minuti e SMS illimitati">
+      <textarea id="pl-details" placeholder="150GB, minuti e SMS illimitati" rows="3"></textarea>
       <label for="pl-image">Foto o PDF dell'offerta (es. volantino A5) — oppure lascia gli altri campi vuoti se carichi solo questa</label>
       <div class="photo-row">
         <img id="pl-image-preview" class="photo-preview" style="display:none;">
         <input type="file" id="pl-image" accept="image/*,.pdf,application/pdf">
       </div>
+      <button class="secondary" id="ocr-scan-btn" type="button" style="width:100%; margin-bottom:14px;">🔍 Leggi testo dal volantino (OCR)</button>
+      <p class="hint" id="ocr-status" style="display:none;"></p>
       <div class="form-actions">
         <button class="secondary" id="cancel-plan">Annulla</button>
         <button id="save-plan">Salva piano</button>
@@ -1225,6 +1228,58 @@
       preview.style.display = 'block';
     } catch (err) {
       toast('Errore nel caricare la foto: ' + err.message, true);
+    }
+  });
+
+  // ---- lettura del testo dal volantino (OCR), per compilare da sola
+  // nome/prezzo/dettagli. Il riconoscimento non e' perfetto: i campi
+  // restano comunque modificabili a mano dopo la lettura. ----
+  function parseOcrText(rawText){
+    const lines = rawText
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l.length > 1);
+
+    // Cerchiamo un prezzo tipo "9,99€" o "9,99 € /mese" in tutto il testo.
+    const priceMatch = rawText.match(/(\d{1,4}[.,]\d{1,2})\s*€/);
+    let price = '';
+    if (priceMatch) {
+      const hasMese = /mese/i.test(rawText.slice(Math.max(0, priceMatch.index - 5), priceMatch.index + 20));
+      price = `${priceMatch[1]}€${hasMese ? '/mese' : ''}`;
+    }
+
+    // Come nome, la riga piu' lunga tra le prime (di solito e' il titolo
+    // dell'offerta su un volantino), escludendo righe che sono solo il prezzo.
+    const candidateLines = lines.filter(l => !/^\d{1,4}[.,]?\d{0,2}\s*€?$/.test(l));
+    const name = candidateLines.length ? candidateLines.reduce((a, b) => b.length > a.length ? b : a) : '';
+
+    const details = lines.join(' · ');
+    return { name, price, details };
+  }
+
+  document.getElementById('ocr-scan-btn').addEventListener('click', async () => {
+    if (!planImageData) { toast('Carica prima una foto del volantino.', true); return; }
+    if (typeof Tesseract === 'undefined') { toast('Libreria OCR non disponibile.', true); return; }
+    const statusEl = document.getElementById('ocr-status');
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Lettura del testo in corso, qualche secondo...';
+    const btn = document.getElementById('ocr-scan-btn');
+    btn.disabled = true;
+    try {
+      const worker = await Tesseract.createWorker('ita');
+      const { data: { text } } = await worker.recognize(planImageData);
+      await worker.terminate();
+      const parsed = parseOcrText(text);
+      if (parsed.name && !document.getElementById('pl-name').value) document.getElementById('pl-name').value = parsed.name;
+      if (parsed.price && !document.getElementById('pl-price').value) document.getElementById('pl-price').value = parsed.price;
+      if (parsed.details) document.getElementById('pl-details').value = parsed.details;
+      statusEl.textContent = 'Testo letto — controlla e correggi i campi prima di salvare, l\'OCR non è sempre preciso.';
+    } catch (err) {
+      statusEl.textContent = '';
+      statusEl.style.display = 'none';
+      toast('Errore nella lettura del testo: ' + err.message, true);
+    } finally {
+      btn.disabled = false;
     }
   });
 
