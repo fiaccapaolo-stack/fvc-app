@@ -290,7 +290,6 @@
   <!-- ===================== OFFERTE ===================== -->
   <div class="tabpage" id="tab-offerte">
     <button id="new-offer-btn" type="button">+ Nuova offerta</button>
-    <button class="secondary" id="delete-all-offers-btn" type="button" style="width:100%; margin-top:8px;">🗑 Elimina tutte le offerte</button>
 
     <div class="card" id="offer-form-card" style="display:none; margin-top:12px;">
       <input type="hidden" id="f-editing-id">
@@ -1357,27 +1356,12 @@
     if (!confirm('Eliminare questa offerta?')) return;
     try {
       await apiFetch('/api/admin/offers/' + encodeURIComponent(id), { method: 'DELETE' });
-      toast('Offerta eliminata. Notifica inviata.');
+      toast('Offerta eliminata.');
       loadOffers();
     } catch (err) {
       toast('Errore: ' + err.message, true);
     }
   };
-
-  document.getElementById('delete-all-offers-btn').addEventListener('click', async () => {
-    if (!confirm('Eliminare TUTTE le offerte? I clienti riceveranno una notifica.')) return;
-    const btn = document.getElementById('delete-all-offers-btn');
-    btn.disabled = true;
-    try {
-      const res = await apiFetch('/api/admin/offers', { method: 'DELETE' });
-      toast('Eliminate ' + (res.deleted || 0) + ' offerte. Notifica inviata.');
-      loadOffers();
-    } catch (err) {
-      toast('Errore: ' + err.message, true);
-    } finally {
-      btn.disabled = false;
-    }
-  });
 
   document.getElementById('save-btn').addEventListener('click', async () => {
     const editingId = document.getElementById('f-editing-id').value;
