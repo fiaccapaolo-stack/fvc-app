@@ -668,79 +668,146 @@
   let brandImportResults = []; // { name, spec, price, installments, existingIndex }
 
   // ===== Foto automatiche da Wikimedia Commons =====
-  // Cerca una foto del modello solo quando il prodotto non ne ha già una.
-  // Non blocca mai l'importazione: se non trova una foto, image resta vuoto.
+  // Cerca la foto del MODELLO, non della variante commerciale (GB, colore, _sv...).
+  // Una foto manuale esistente ha sempre la precedenza.
   const commonsImageCache = new Map();
 
   function getPhotoSearchName(productName){
     let value = String(productName || '').trim();
-    value = value.replace(/[_-]?sv\b/ig, '').replace(/\b\d+\s*(?:gb|tb)\b/ig, '');
-    value = value.replace(/\b(black|blue|white|green|red|pink|purple|gray|grey|silver|gold|nero|bianco|blu|verde|rosso|rosa|viola|grigio|argento|oro)\b/ig, '');
-    value = value.replace(/\s+/g, ' ').trim();
+
+    // Togliamo elementi che non servono per identificare il modello.
+    value = value
+      .replace(/[_-]?sv\b/ig, '')
+      .replace(/\b\d+\s*(?:gb|tb)\b/ig, '')
+      .replace(/\b(5g|4g|lte|dual\s*sim|sim)\b/ig, '')
+      .replace(/\b(black|blue|white|green|red|pink|purple|gray|grey|silver|gold|nero|bianco|blu|verde|rosso|rosa|viola|grigio|argento|oro)\b/ig, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const n = normalizeProductName(value);
-    const iphone = n.match(/iphone(16|17)(?:e|plus|pro|max)?/);
-    if (iphone) {
-      const suffix = n.match(/iphone(?:16|17)(e|plus|promax|pro)?/);
-      return suffix ? `Apple iPhone ${suffix[0].replace(/^iphone/, '').replace('promax',' Pro Max').replace('plus',' Plus').replace('pro',' Pro').replace('e','e')}` : value;
+
+    // Apple: iPhone 16 / 17 e relative varianti.
+    let m = n.match(/iphone(16|17)(promax|pro|plus|e)?/);
+    if (m){
+      const family = m[1];
+      const suffix = m[2] === 'promax' ? ' Pro Max'
+        : m[2] === 'pro' ? ' Pro'
+        : m[2] === 'plus' ? ' Plus'
+        : m[2] === 'e' ? 'e' : '';
+      return `iPhone ${family}${suffix}`;
     }
 
-    const samsungS = n.match(/(?:samsung)?galaxys(25|26)(edge|plus|ultra|fe)?/);
-    if (samsungS) {
-      const model = `Galaxy S${samsungS[1]}${samsungS[2] === 'edge' ? ' Edge' : samsungS[2] === 'plus' ? '+' : samsungS[2] === 'ultra' ? ' Ultra' : samsungS[2] === 'fe' ? ' FE' : ''}`;
-      return `Samsung ${model}`;
+    // Samsung serie S.
+    m = n.match(/(?:samsung)?galaxys(25|26)(edge|plus|ultra|fe)?/);
+    if (m){
+      const suffix = m[2] === 'edge' ? ' Edge'
+        : m[2] === 'plus' ? '+'
+        : m[2] === 'ultra' ? ' Ultra'
+        : m[2] === 'fe' ? ' FE' : '';
+      return `Samsung Galaxy S${m[1]}${suffix}`;
     }
 
-    const samsungA = n.match(/(?:samsung)?galaxya([1-9][0-9]*7)/);
-    if (samsungA) return `Samsung Galaxy A${samsungA[1]}`;
+    // Samsung serie A ammessa.
+    m = n.match(/(?:samsung)?galaxya([1-9][0-9]*7)/);
+    if (m) return `Samsung Galaxy A${m[1]}`;
 
     return value;
   }
 
-  async function findCommonsProductImage(productName){
-    const searchName = getPhotoSearchName(productName);
-    if (!searchName) return '';
-    const cacheKey = normalizeProductName(searchName);
-    if (commonsImageCache.has(cacheKey)) return commonsImageCache.get(cacheKey);
+  function commonsCandidateScore(title, target){
+    const t = normalizeProductName(title);
+    const q = normalizeProductName(target);
+    if (!t || !q) return -999;
 
-    try {
+    let score = 0;
+
+    // Il modello deve essere riconoscibile nel titolo.
+    if (t === q) score += 180;
+    if (t.includes(q)) score += 120;
+    if (q.includes(t)) score += 40;
+
+    // Punteggio per le parole significative del modello.
+    const tokens = q.match(/[a-z]+\d*|\d+/g) || [];
+    for (const token of tokens){
+      if (token.length >= 2 && t.includes(token)) score += 12;
+    }
+
+    if (/iphone|galaxy|samsung|smartphone|mobile/i.test(title)) score += 12;
+
+    // Evitiamo immagini che non sono il telefono.
+    if (/logo|icon|wallpaper|screenshot|screen\s*shot|box|packaging|case|cover|charger|earbuds|watch|tablet/i.test(title)) score -= 90;
+    if (/taken\s*with|photographed\s*with|photo\s*by/i.test(title)) score -= 45;
+
+    return score;
+  }
+
+  async function searchCommonsImages(query){
+    const variants = [
+      query,
+      query.replace(/^Apple\s+/i, ''),
+      query.replace(/^Samsung\s+/i, ''),
+      query.replace(/\s+/g, ' ').trim()
+    ].filter(Boolean);
+
+    const pagesById = new Map();
+
+    for (const q of [...new Set(variants)]){
       const params = new URLSearchParams({
         action: 'query',
         generator: 'search',
-        gsrsearch: `"${searchName}"`,
+        gsrsearch: q,
         gsrnamespace: '6',
-        gsrlimit: '8',
+        gsrlimit: '20',
         prop: 'imageinfo',
         iiprop: 'url|mime',
         iiurlwidth: '900',
         format: 'json',
         origin: '*'
       });
+
       const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`);
-      if (!response.ok) throw new Error(`Commons HTTP ${response.status}`);
+      if (!response.ok) continue;
+
       const data = await response.json();
-      const pages = Object.values(data.query?.pages || {});
-      const target = normalizeProductName(searchName);
+      Object.values(data.query?.pages || {}).forEach(page => {
+        if (page?.pageid != null) pagesById.set(String(page.pageid), page);
+      });
 
-      const candidates = pages
-        .map(page => {
-          const title = String(page.title || '').replace(/^File:/i, '');
-          const normalizedTitle = normalizeProductName(title);
-          const info = page.imageinfo?.[0];
-          const mime = String(info?.mime || '').toLowerCase();
-          if (!info?.thumburl || !/^image\/(jpeg|png|webp)$/.test(mime)) return null;
+      // Se abbiamo già raccolto parecchi candidati, non facciamo richieste inutili.
+      if (pagesById.size >= 30) break;
+    }
 
-          let score = 0;
-          if (normalizedTitle.includes(target)) score += 100;
-          if (target.includes(normalizedTitle)) score += 20;
-          if (/smartphone|phone|galaxy|iphone/i.test(title)) score += 10;
-          if (/taken with|screenshot|wallpaper|logo|icon|box|case|cover/i.test(title)) score -= 50;
-          return { url: info.thumburl, score };
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.score - a.score);
+    return [...pagesById.values()];
+  }
 
-      const url = candidates.length && candidates[0].score >= 50 ? candidates[0].url : '';
+  async function findCommonsProductImage(productName){
+    const searchName = getPhotoSearchName(productName);
+    if (!searchName) return '';
+
+    const cacheKey = normalizeProductName(searchName);
+    if (commonsImageCache.has(cacheKey)) return commonsImageCache.get(cacheKey);
+
+    try {
+      const pages = await searchCommonsImages(searchName);
+      const candidates = pages.map(page => {
+        const title = String(page.title || '').replace(/^File:/i, '');
+        const info = page.imageinfo?.[0];
+        const mime = String(info?.mime || '').toLowerCase();
+
+        if (!info?.thumburl || !/^image\/(jpeg|png|webp)$/.test(mime)) return null;
+
+        const score = commonsCandidateScore(title, searchName);
+        return {
+          url: info.thumburl,
+          title,
+          score
+        };
+      }).filter(Boolean).sort((a, b) => b.score - a.score);
+
+      // Soglia prudente: meglio nessuna foto che una foto di un modello diverso.
+      const best = candidates[0];
+      const url = best && best.score >= 55 ? best.url : '';
+
       commonsImageCache.set(cacheKey, url);
       return url;
     } catch (err) {
@@ -755,17 +822,22 @@
     if (!pending.length) return;
 
     let completed = 0;
+    const total = pending.length;
+    const queue = pending.slice();
+
     const worker = async () => {
-      while (pending.length) {
-        const item = pending.shift();
+      while (queue.length){
+        const item = queue.shift();
         if (!item) return;
+
         item.image = await findCommonsProductImage(item.name);
         completed += 1;
-        if (completed % 3 === 0 || completed === results.length) {
-          toast(`Ricerca foto automatica: ${completed}/${results.length}`);
-        }
+
+        toast(`Ricerca foto automatica: ${completed}/${total}`);
       }
     };
+
+    // Tre richieste concorrenti per non martellare l'API.
     await Promise.all([worker(), worker(), worker()]);
   }
 
@@ -937,7 +1009,7 @@
       document.getElementById('brand-import-summary').textContent =
         `Trovati ${brandImportResults.length} smartphone tra i marchi selezionati: ${newCount} nuovi, ${updateCount} già presenti (verranno aggiornati prezzo e rata).`;
       document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r =>
-        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments.map(i => `${i.months} da ${i.amount}`).join(' o ')}` : ''} · ${r.image ? '📷 foto trovata' : '📷 foto non trovata'}`
+        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments.map(i => `${i.months} da ${i.amount}`).join(' o ')}` : ''} · ${r.image ? `📷 foto trovata (${getPhotoSearchName(r.name)})` : `⚠️ foto non trovata (${getPhotoSearchName(r.name)})`}`
       ).join('<br>');
       document.getElementById('brand-import-card').style.display = 'block';
       document.getElementById('brand-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
