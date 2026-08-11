@@ -463,6 +463,21 @@
     html{scroll-behavior:auto;}
     .tile{transition:none;}
   }
+
+  /* Aggiunta: ricerca e sezioni produttore nel catalogo smartphone. Nessuna modifica alle card originali. */
+  .catalog-search-wrap{margin:12px 0 14px;}
+  #catalog-search{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
+  #catalog-search:focus{outline:1px solid var(--cyan);}
+  .brand-section{margin-bottom:12px;}
+  .brand-toggle{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer;}
+  .brand-toggle .brand-name{color:var(--gold);font-family:var(--font-display);font-weight:600;}
+  .brand-toggle .brand-count{margin-left:auto;color:var(--text-dim);font-family:var(--font-mono);font-size:10px;}
+  .brand-toggle .brand-arrow{color:var(--text-dim);transition:transform .15s ease;}
+  .brand-section.collapsed .brand-arrow{transform:rotate(-90deg);}
+  .brand-section.collapsed .brand-products{display:none;}
+  .brand-products{padding-top:10px;}
+  .catalog-no-results{padding:12px 0;color:var(--text-dim);font-size:13px;}
+
 </style>
 </head>
 <body>
@@ -524,6 +539,10 @@
     <button class="tab active" data-cat="smartphone">Smartphone</button>
     <button class="tab" data-cat="accessori">Accessori</button>
     <button class="tab" data-cat="ricambi">Ricambi</button>
+  </div>
+
+  <div class="catalog-search-wrap">
+    <input id="catalog-search" type="search" placeholder="Cerca marca o modello..." autocomplete="off" aria-label="Cerca marca o modello">
   </div>
 
   <div class="products" id="products"></div>
@@ -713,9 +732,39 @@
     if (img) openLightbox(img.currentSrc || img.src);
   });
 
-  function renderCatalog(cat){
-    const wrap = document.getElementById('products');
-    wrap.innerHTML = (CATALOG[cat] || []).map((p, i) => `
+  const OPEN_BRANDS = new Set();
+
+  function normalizeCatalogSearch(value){
+    // La ricerca non distingue maiuscole/minuscole e ignora spazi e
+    // qualsiasi separatore o carattere non alfanumerico.
+    // Esempi: "S26", "s26", "S 26", "s-26" -> "s26".
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function getCatalogBrand(product){
+    const value = normalizeCatalogSearch((product.name || '') + ' ' + (product.spec || ''));
+    if (value.includes('samsung') || value.includes('galaxy')) return 'Samsung';
+    if (value.includes('apple') || value.includes('iphone')) return 'Apple';
+    if (value.includes('xiaomi') || value.includes('redmi')) return 'Xiaomi';
+    if (value.includes('oppo')) return 'Oppo';
+    if (value.includes('realme')) return 'Realme';
+    if (value.includes('honor')) return 'Honor';
+    return 'Altri';
+  }
+
+  function escapeCatalogText(value){
+    return String(value ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  function renderCatalogCard(p, i, cat){
+    // Questa è la card originale: non ne cambiamo grafica o contenuto.
+    return `
       <div class="card${cat === 'smartphone' ? ' product-card' : ''}" ${cat === 'smartphone' ? `data-cat="${cat}" data-index="${i}"` : ''}>
         <div class="thumb">
           ${p.image
@@ -731,9 +780,77 @@
           <span class="price">${p.price}</span>
           <span class="stock">${stockDots(p.stock)}</span>
         </div>
-      </div>
-    `).join('');
+      </div>`;
   }
+
+  function renderCatalog(cat){
+    const wrap = document.getElementById('products');
+    const search = document.getElementById('catalog-search');
+
+    // Accessori e Ricambi restano esattamente come nell'originale.
+    if (cat !== 'smartphone'){
+      wrap.innerHTML = (CATALOG[cat] || []).map((p, i) => renderCatalogCard(p, i, cat)).join('');
+      return;
+    }
+
+    const query = normalizeCatalogSearch(search ? search.value : '');
+    const originalItems = CATALOG.smartphone || [];
+
+    const filtered = originalItems
+      .map((p, i) => ({ p, i }))
+      .filter(({p}) => {
+        if (!query) return true;
+        const model = normalizeCatalogSearch(p.name);
+        const spec = normalizeCatalogSearch(p.spec);
+        const brand = normalizeCatalogSearch(getCatalogBrand(p));
+
+        return model.includes(query) ||
+               spec.includes(query) ||
+               brand.includes(query);
+      });
+
+    if (!filtered.length){
+      wrap.innerHTML = '<div class="catalog-no-results">Nessuno smartphone trovato.</div>';
+      return;
+    }
+
+    const groups = {};
+    filtered.forEach(({p,i}) => {
+      const brand = getCatalogBrand(p);
+      if (!groups[brand]) groups[brand] = [];
+      groups[brand].push({p,i});
+    });
+
+    const brands = Object.keys(groups).sort((a,b) => a.localeCompare(b,'it',{sensitivity:'base'}));
+    const searching = Boolean(query);
+
+    wrap.innerHTML = brands.map(brand => {
+      const products = groups[brand].slice().sort((a,b) =>
+        String(a.p.name || '').localeCompare(String(b.p.name || ''),'it',{sensitivity:'base',numeric:true})
+      );
+      const key = normalizeCatalogSearch(brand);
+      const open = searching || OPEN_BRANDS.has(key);
+
+      return `
+        <div class="brand-section ${open ? '' : 'collapsed'}">
+          <button type="button" class="brand-toggle" onclick="toggleBrandSection('${key.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+            <span class="brand-name">${escapeCatalogText(brand)}</span>
+            <span class="brand-count">${products.length}</span>
+            <span class="brand-arrow">▼</span>
+          </button>
+          <div class="brand-products">
+            ${products.map(({p,i}) => renderCatalogCard(p,i,cat)).join('')}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  window.toggleBrandSection = function(key){
+    if (OPEN_BRANDS.has(key)) OPEN_BRANDS.delete(key);
+    else OPEN_BRANDS.add(key);
+    renderCatalog('smartphone');
+  };
+
   renderCatalog('smartphone');
 
   document.getElementById('tabs').addEventListener('click', (e) => {
@@ -742,6 +859,11 @@
     document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     renderCatalog(btn.dataset.cat);
+  });
+
+  document.getElementById('catalog-search').addEventListener('input', () => {
+    const active = document.querySelector('#tabs .tab.active');
+    if (active && active.dataset.cat === 'smartphone') renderCatalog('smartphone');
   });
 
   // ---- popup prodotto: prezzo totale + rateizzazione, al tap su uno smartphone ----
