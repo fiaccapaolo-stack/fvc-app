@@ -678,10 +678,11 @@
   const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
   let brandImportResults = []; // { name, spec, price, installments, existingIndex }
 
-  // ===== Foto automatiche da Openverse =====
-  // Openverse indicizza immagini con licenze aperte. Usiamo solo fotografie
-  // e una selezione molto conservativa per evitare immagini fuori modello.
-  const openverseImageCache = new Map();
+  // ===== Foto ufficiali dei produttori =====
+  // Le immagini vengono cercate sulle pagine ufficiali Apple/Samsung.
+  // Usiamo Jina Reader solo come lettore della pagina: l'immagine finale
+  // viene sempre presa da un dominio ufficiale del produttore.
+  const officialImageCache = new Map();
 
   function getPhotoSearchName(productName){
     let value = String(productName || '').trim();
@@ -720,112 +721,191 @@
     return value;
   }
 
-  function openverseScore(item, target){
-    const title = String(item.title || '');
-    const tags = Array.isArray(item.tags)
-      ? item.tags.map(t => String(t.name || t)).join(' ')
-      : '';
-    const hay = normalizeProductName(`${title} ${tags}`);
-    const q = normalizeProductName(target);
+  function officialManufacturerInfo(productName){
+    const target = getPhotoSearchName(productName);
+    const n = normalizeProductName(target);
+    const isApple = /^iphone(16|17)/.test(n);
+    const isSamsung = /^samsunggalaxys(25|26)|^samsunggalaxya[1-9][0-9]*7/.test(n);
+    const isXiaomi = /^(xiaomi|redmi)/.test(n);
+    const isOppo = /^oppo/.test(n);
+    const isRealme = /^realme/.test(n);
+    const isHonor = /^honor/.test(n);
 
+    if (isApple){
+      const slug = n.includes('17') ? 'iphone-17' : 'iphone-16';
+      const suffix = n.includes('promax') ? '-pro' : n.includes('pro') ? '-pro' : '';
+      const page = `https://www.apple.com/it/${slug}${suffix}/`;
+      return { brand: 'Apple', target, page, domains: ['apple.com', 'images.apple.com'] };
+    }
+
+    if (isSamsung){
+      let page = '';
+      if (/galaxys26ultra/.test(n)) page = 'https://www.samsung.com/it/smartphones/galaxy-s26-ultra/';
+      else if (/galaxys26/.test(n)) page = 'https://www.samsung.com/it/smartphones/galaxy-s26/';
+      else if (/galaxys25ultra/.test(n)) page = 'https://www.samsung.com/it/smartphones/galaxy-s25-ultra/';
+      else if (/galaxys25/.test(n)) page = 'https://www.samsung.com/it/smartphones/galaxy-s25/';
+      else page = `https://www.samsung.com/it/search/?searchvalue=${encodeURIComponent(target)}`;
+      return { brand: 'Samsung', target, page, domains: ['samsung.com', 'images.samsung.com', 'img.global.news.samsung.com'], findProductLink: true };
+    }
+
+    // Gli altri marchi già presenti nei filtri del catalogo mantengono i
+    // loro filtri attuali: cambiamo solo la sorgente delle immagini.
+    if (isXiaomi){
+      return {
+        brand: 'Xiaomi',
+        target,
+        page: `https://www.mi.com/it/search/?keyword=${encodeURIComponent(target)}`,
+        domains: ['mi.com', 'i01.appmifile.com', 'cdn.cnbj1.fds.api.mi-img.com'],
+        findProductLink: true
+      };
+    }
+
+    if (isOppo){
+      return {
+        brand: 'OPPO',
+        target,
+        page: 'https://www.oppo.com/it/smartphones/',
+        domains: ['oppo.com', 'static-www.oppo.com'],
+        findProductLink: true
+      };
+    }
+
+    if (isRealme){
+      return {
+        brand: 'realme',
+        target,
+        page: 'https://www.realme.com/it/',
+        domains: ['realme.com'],
+        findProductLink: true
+      };
+    }
+
+    if (isHonor){
+      return {
+        brand: 'HONOR',
+        target,
+        page: 'https://www.honor.com/it/phones/',
+        domains: ['honor.com'],
+        findProductLink: true
+      };
+    }
+
+    return null;
+  }
+
+  async function readOfficialPage(url){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 18000);
+    try{
+      const response = await fetch(`https://r.jina.ai/${url}`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'text/plain' }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function extractOfficialImages(markdown, info){
+    const images = [];
+    const push = (url, alt='') => {
+      if (!url) return;
+      let clean = url.replace(/^<|>$/g, '').replace(/&amp;/g, '&');
+      if (!/^https?:\/\//i.test(clean)) return;
+      const lower = clean.toLowerCase();
+      if (!info.domains.some(d => lower.includes(d))) return;
+      if (!/\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(clean)) return;
+      images.push({ url: clean, alt: String(alt || '') });
+    };
+
+    const md = String(markdown || '');
+    const mdRe = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)/gi;
+    let m;
+    while ((m = mdRe.exec(md))) push(m[2], m[1]);
+
+    const rawRe = /https?:\/\/[^\s)<>"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)<>"']*)?/gi;
+    while ((m = rawRe.exec(md))) push(m[0], '');
+
+    const unique = new Map();
+    images.forEach(x => unique.set(x.url, x));
+    return [...unique.values()];
+  }
+
+  function scoreOfficialImage(candidate, target, brand){
+    const hay = normalizeProductName(`${candidate.alt} ${candidate.url}`);
+    const q = normalizeProductName(target);
     if (!hay || !q) return -999;
 
     const tokens = q.match(/[a-z]+\d*|\d+/g) || [];
     let score = 0;
-
-    // Tutti i token fondamentali del modello devono comparire.
     const missing = tokens.filter(t => t.length >= 2 && !hay.includes(t));
-    if (missing.length) return -500 - missing.length;
+    if (missing.length) score -= missing.length * 45;
+    score += tokens.filter(t => t.length >= 2 && hay.includes(t)).length * 35;
+    if (hay.includes(q)) score += 180;
 
-    score += tokens.filter(t => t.length >= 2 && hay.includes(t)).length * 30;
+    if (brand === 'Apple' && /iphone/.test(hay)) score += 100;
+    if (brand === 'Samsung' && /samsung|galaxy/.test(hay)) score += 100;
+    if (brand === 'Xiaomi' && /xiaomi|redmi/.test(hay)) score += 100;
+    if (brand === 'OPPO' && /oppo/.test(hay)) score += 100;
+    if (brand === 'realme' && /realme/.test(hay)) score += 100;
+    if (brand === 'HONOR' && /honor/.test(hay)) score += 100;
 
-    if (hay.includes(q)) score += 160;
+    // Per il catalogo vogliamo la foto del telefono, preferibilmente il retro.
+    if (/back|rear|backside|retro|posteriore/.test(hay)) score += 170;
+    if (/front|display|screen|schermo|fronte/.test(hay)) score -= 90;
+    if (/box|packaging|case|cover|charger|earbuds|watch|tablet|logo|poster|screenshot/.test(hay)) score -= 250;
+    if (/phone|smartphone|iphone|galaxy/.test(hay)) score += 40;
 
-    // Marchio e famiglia telefono.
-    if (/iphone/.test(q) && /iphone/.test(hay)) score += 60;
-    if (/samsung|galaxy/.test(q) && (/samsung|galaxy/.test(hay))) score += 60;
-
-    // Preferiamo fotografie vere.
-    if (String(item.category || '').toLowerCase() === 'photograph') score += 35;
-
-    // Evitiamo risultati evidentemente non utili come foto prodotto.
-    if (/logo|icon|wallpaper|screenshot|screen\s*shot|box|packaging|case|cover|charger|earbuds|watch|tablet|advertisement|poster/i.test(title + ' ' + tags)){
-      score -= 140;
-    }
-
-    // Se è una foto scattata con quel telefono, non è la foto del telefono.
-    if (/taken\s*with|photographed\s*with|photo\s*by/i.test(title + ' ' + tags)){
-      score -= 100;
-    }
-
-    // Per iPhone preferiamo nettamente il retro.
-    if (/iphone/.test(q)){
-      if (/\b(back|rear|backside|back\s*view|rear\s*view)\b/i.test(title + ' ' + tags)) score += 120;
-      if (/\b(front|frontside|front\s*view|display|screen)\b/i.test(title + ' ' + tags)) score -= 150;
-    }
+    // Penalizziamo immagini editoriali/non-prodotto.
+    if (/person|people|woman|man|child|selfie|landscape|dandelion|advertisement|banner/.test(hay)) score -= 120;
 
     return score;
   }
 
-  async function searchOpenverseImages(query){
-    const variants = [
-      `"${query}"`,
-      query,
-      `${query} smartphone`,
-      query.replace(/^Samsung\s+/i, ''),
-      query.replace(/^Apple\s+/i, '')
-    ].filter(Boolean);
+  async function findOfficialManufacturerImage(productName){
+    const info = officialManufacturerInfo(productName);
+    if (!info) return '';
 
-    const all = new Map();
-
-    for (const q of [...new Set(variants)]){
-      const params = new URLSearchParams({
-        q,
-        category: 'photograph',
-        page_size: '20',
-        page: '1'
-      });
-
-      const response = await fetch(`https://api.openverse.org/v1/images/?${params.toString()}`);
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      for (const item of (data.results || [])){
-        if (item.id) all.set(String(item.id), item);
-      }
-
-      if (all.size >= 50) break;
-    }
-
-    return [...all.values()];
-  }
-
-  async function findOpenverseProductImage(productName){
-    const searchName = getPhotoSearchName(productName);
-    if (!searchName) return '';
-
-    const cacheKey = normalizeProductName(searchName);
-    if (openverseImageCache.has(cacheKey)) return openverseImageCache.get(cacheKey);
+    const cacheKey = normalizeProductName(info.target);
+    if (officialImageCache.has(cacheKey)) return officialImageCache.get(cacheKey);
 
     try{
-      const results = await searchOpenverseImages(searchName);
+      let markdown = await readOfficialPage(info.page);
 
-      const candidates = results.map(item => ({
-        item,
-        score: openverseScore(item, searchName),
-        url: item.thumbnail || item.url || ''
-      }))
-      .filter(x => x.url && x.score >= 170)
-      .sort((a,b) => b.score - a.score);
+      // Per le pagine di ricerca/catalogo dei produttori, seguiamo prima
+      // la scheda ufficiale che corrisponde al modello, quando disponibile.
+      if (info.findProductLink){
+        const links = (markdown.match(/https?:\/\/[^\s)<>"']+/gi) || [])
+          .map(u => u.replace(/[),.;]+$/g, ''))
+          .filter(u => info.domains.some(d => u.toLowerCase().includes(d.toLowerCase())));
 
-      const best = candidates[0];
-      const url = best ? best.url : '';
+        const normalizedTarget = normalizeProductName(info.target);
+        const targetTokens = normalizedTarget.match(/[a-z]+\d*|\d+/g) || [];
+        const productLink = links
+          .map(u => ({
+            u,
+            score: targetTokens.filter(t => t.length >= 2 && normalizeProductName(u).includes(t)).length
+          }))
+          .sort((a,b) => b.score - a.score)[0];
 
-      openverseImageCache.set(cacheKey, url);
-      return url;
+        if (productLink && productLink.score >= Math.max(2, Math.min(3, targetTokens.length))){
+          markdown = await readOfficialPage(productLink.u);
+        }
+      }
+
+      const candidates = extractOfficialImages(markdown, info)
+        .map(item => ({ ...item, score: scoreOfficialImage(item, info.target, info.brand) }))
+        .filter(item => item.score >= 180)
+        .sort((a,b) => b.score - a.score);
+
+      const best = candidates[0]?.url || '';
+      officialImageCache.set(cacheKey, best);
+      return best;
     }catch(err){
-      console.warn('Ricerca immagine Openverse fallita per', searchName, err);
-      openverseImageCache.set(cacheKey, '');
+      console.warn(`Ricerca foto ufficiale ${info.brand} fallita per`, info.target, err);
+      officialImageCache.set(cacheKey, '');
       return '';
     }
   }
@@ -842,8 +922,8 @@
     bar.style.width = `${pct}%`;
     count.textContent = `${completed} / ${total} (${pct}%)`;
     status.textContent = currentName
-      ? `Ricerca foto: ${currentName}`
-      : 'Preparazione ricerca foto...';
+      ? `Ricerca foto ufficiale: ${currentName}`
+      : 'Preparazione ricerca foto ufficiali...';
   }
 
   function showPhotoProgress(total){
@@ -862,43 +942,37 @@
   }
 
   async function enrichProductsWithCommonsImages(results){
-    const pending = results.filter(r => !r.image);
+    const pending = results.filter(r => r.needsOfficialImage);
     if (!pending.length) return;
 
     let completed = 0;
     const total = pending.length;
     const queue = pending.slice();
-
-    // Il pannello rimane visibile per TUTTA la fase di ricerca.
     showPhotoProgress(total);
 
     const worker = async () => {
       while (queue.length){
         const item = queue.shift();
         if (!item) return;
-
         setPhotoProgress(completed, total, item.name);
-
-        try {
-          item.image = await findOpenverseProductImage(item.name);
-        } catch (err) {
-          item.image = '';
-          console.warn('Errore foto per', item.name, err);
+        try{
+          const official = await findOfficialManufacturerImage(item.name);
+          if (official) item.image = official;
+        }catch(err){
+          console.warn('Errore foto ufficiale per', item.name, err);
         }
-
         completed += 1;
-        setPhotoProgress(completed, total, completed < total ? 'Preparazione prossimo prodotto...' : 'Foto completate.');
+        setPhotoProgress(completed, total, completed < total ? 'Preparazione prossimo prodotto...' : 'Foto ufficiali completate.');
       }
     };
 
-    try {
+    try{
       await Promise.all([worker(), worker(), worker()]);
     } finally {
-      setPhotoProgress(total, total, 'Foto completate.');
+      setPhotoProgress(total, total, 'Foto ufficiali completate.');
       setTimeout(hidePhotoProgress, 500);
     }
   }
-
 
   // Stesso filtro usato nel catalogo cliente:
   // Apple -> solo iPhone 16 e 17
@@ -1059,7 +1133,16 @@
       // La ricerca è best-effort: se Commons non trova una foto, l'importazione continua normalmente.
       const existingImageMap = new Map(smartphones.map(p => [normalizeProductName(p.name), p.image || '']));
       brandImportResults.forEach(r => {
-        if (!r.image) r.image = existingImageMap.get(normalizeProductName(r.name)) || '';
+        const info = officialManufacturerInfo(r.name);
+        // Apple e Samsung: al nuovo import cerchiamo sempre la foto ufficiale,
+        // così possiamo sostituire le vecchie immagini sbagliate.
+        if (info) {
+          r.image = '';
+          r.needsOfficialImage = true;
+        } else {
+          r.image = existingImageMap.get(normalizeProductName(r.name)) || '';
+          r.needsOfficialImage = false;
+        }
       });
       await enrichProductsWithCommonsImages(brandImportResults);
 
@@ -1068,7 +1151,7 @@
       document.getElementById('brand-import-summary').textContent =
         `Trovati ${brandImportResults.length} smartphone tra i marchi selezionati: ${newCount} nuovi, ${updateCount} già presenti (verranno aggiornati prezzo e rata).`;
       document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r =>
-        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments.map(i => `${i.months} da ${i.amount}`).join(' o ')}` : ''} · ${r.image ? `📷 foto trovata (${getPhotoSearchName(r.name)})` : `⚠️ foto non trovata (${getPhotoSearchName(r.name)})`}`
+        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments.map(i => `${i.months} da ${i.amount}`).join(' o ')}` : ''} · ${r.image ? `📷 foto ufficiale trovata (${getPhotoSearchName(r.name)})` : `⚠️ foto ufficiale non trovata (${getPhotoSearchName(r.name)})`}`
       ).join('<br>');
       document.getElementById('brand-import-card').style.display = 'block';
       document.getElementById('brand-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
