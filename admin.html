@@ -714,9 +714,11 @@
       const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
       const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
       const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
+      const priceCol = guessColumn(headers, ['pap', 'prezzo', 'listino']);
       const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
       const discountCol = guessColumn(headers, ['sconto']);
       const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
+      const financeCodeCol = guessColumn(headers, ['codice fin', 'codicefin', 'codice_fin']);
       if (truncated) toast('File molto grande: analizzate solo le prime 8000 righe con dati.');
 
       // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
@@ -728,14 +730,29 @@
         const matches = rows.filter(r => {
           const rname = String(r[nameCol] || '');
           if (!productNamesMatch(rname, product.name)) return false;
+          if (isExcludedProductName(rname)) return false;
           const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-          return m === 30 && !isExcludedProductName(rname);
+          if (m !== 30) return false;
+          if (!isValidFinanceCode(financeCodeCol ? r[financeCodeCol] : '')) return false;
+          return true;
         });
         if (matches.length === 0) return;
         let uniqueMatches = matches.filter((r, matchIndex) =>
           matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
         );
-        // Teniamo solo le 2 opzioni con la rata mensile piu' bassa.
+
+        // Prima scegliamo il prezzo smartphone piu' basso; poi, tra le righe
+        // con quel prezzo, scegliamo le rate mensili piu' basse. In questo modo
+        // prezzo e rata appartengono sempre alla stessa offerta Excel.
+        const pricedMatches = uniqueMatches
+          .map(row => ({ row, price: priceCol ? parseFlexibleNumber(row[priceCol]) : null }))
+          .filter(x => x.price !== null);
+        if (pricedMatches.length) {
+          const minPrice = Math.min(...pricedMatches.map(x => x.price));
+          uniqueMatches = pricedMatches
+            .filter(x => Math.abs(x.price - minPrice) < 0.005)
+            .map(x => x.row);
+        }
         uniqueMatches.sort((a, b) => {
           const pa = amountCol ? parseFlexibleNumber(a[amountCol]) : null;
           const pb = amountCol ? parseFlexibleNumber(b[amountCol]) : null;
@@ -838,15 +855,18 @@
       const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
       const discountCol = guessColumn(headers, ['sconto']);
       const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
+      const financeCodeCol = guessColumn(headers, ['codice fin', 'codicefin', 'codice_fin']);
 
-      // Solo i marchi scelti, niente "pack", solo le righe a 30 rate.
+      // Solo i marchi scelti, niente "pack" o "_sv", solo le righe a 30 rate
+      // e solo i due codici finanziari ammessi.
       const filtered = rows.filter(r => {
         const rname = String(r[nameCol] || '').toLowerCase();
         if (!rname) return false;
         if (isExcludedProductName(rname)) return false;
         if (!BRAND_KEYWORDS.some(b => rname.includes(b))) return false;
         const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-        return m === 30;
+        if (m !== 30) return false;
+        return isValidFinanceCode(financeCodeCol ? r[financeCodeCol] : '');
       });
 
       if (filtered.length === 0) {
@@ -865,8 +885,22 @@
 
       const smartphones = config.products.smartphone || [];
       brandImportResults = [...grouped.values()].map(groupRows => {
-        // Ordiniamo le varianti per rata mensile crescente e teniamo solo le 2 piu' basse.
-        const sorted = groupRows.slice().sort((a, b) => {
+        // Prima scegliamo il prezzo smartphone piu' basso. La rata viene
+        // prelevata dalla stessa riga Excel, cosi' prezzo e finanziamento restano
+        // sempre coerenti. A parita' di prezzo, teniamo fino a 2 rate piu' basse.
+        const priced = groupRows
+          .map(row => ({ row, price: priceCol ? parseFlexibleNumber(row[priceCol]) : null }))
+          .filter(x => x.price !== null);
+        let cheapest;
+        if (priced.length) {
+          const minPrice = Math.min(...priced.map(x => x.price));
+          cheapest = priced
+            .filter(x => Math.abs(x.price - minPrice) < 0.005)
+            .map(x => x.row);
+        } else {
+          cheapest = groupRows.slice();
+        }
+        cheapest.sort((a, b) => {
           const pa = amountCol ? parseFlexibleNumber(a[amountCol]) : null;
           const pb = amountCol ? parseFlexibleNumber(b[amountCol]) : null;
           if (pa === null && pb === null) return 0;
@@ -874,8 +908,8 @@
           if (pb === null) return -1;
           return pa - pb;
         });
-        const cheapest = sorted.slice(0, 2);
-        const r = sorted[0];
+        cheapest = cheapest.slice(0, 2);
+        const r = cheapest[0] || groupRows[0];
         const rawName = String(r[nameCol] || '').trim();
         const price = priceCol ? parseFlexibleNumber(r[priceCol]) : null;
         const spec = gammaCol ? String(r[gammaCol] || '').trim() : '';
@@ -1029,6 +1063,13 @@
   function isExcludedProductName(name){
     const n = String(name || '');
     return /\bpack\b/i.test(n) || /_sv\b/i.test(n);
+  }
+
+  // Nel listino finanziario utilizziamo solo i codici richiesti.
+  // Il codice non viene mai mostrato al cliente: serve solo per filtrare l'importazione.
+  function isValidFinanceCode(code){
+    const value = String(code || '').trim().toUpperCase();
+    return value === 'FN07S' || value === 'FN07U';
   }
 
   function normalizeProductName(value){
