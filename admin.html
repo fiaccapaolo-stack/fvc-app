@@ -694,7 +694,8 @@
         : m[2] === 'pro' ? ' Pro'
         : m[2] === 'plus' ? ' Plus'
         : m[2] === 'e' ? 'e' : '';
-      return `iPhone ${family}${suffix}`;
+      // Per iPhone preferiamo esplicitamente una vista posteriore.
+      return `iPhone ${family}${suffix} back rear back view`;
     }
 
     // Samsung serie S.
@@ -738,15 +739,24 @@
     if (/logo|icon|wallpaper|screenshot|screen\s*shot|box|packaging|case|cover|charger|earbuds|watch|tablet/i.test(title)) score -= 90;
     if (/taken\s*with|photographed\s*with|photo\s*by/i.test(title)) score -= 45;
 
+    // Per iPhone vogliamo la parte posteriore, non il display/frontale.
+    if (/iphone/i.test(title) || /iphone/i.test(target)){
+      if (/\b(back|rear|backside|back\s*view|rear\s*view)\b/i.test(title)) score += 80;
+      if (/\b(front|frontside|front\s*view|display|screen)\b/i.test(title)) score -= 100;
+    }
+
     return score;
   }
 
   async function searchCommonsImages(query){
+    const baseQuery = query.replace(/\s+back\s+rear\s+back\s+view$/i, '').trim();
     const variants = [
       query,
-      query.replace(/^Apple\s+/i, ''),
-      query.replace(/^Samsung\s+/i, ''),
-      query.replace(/\s+/g, ' ').trim()
+      `${baseQuery} back`,
+      `${baseQuery} rear`,
+      baseQuery.replace(/^Apple\s+/i, ''),
+      baseQuery.replace(/^Samsung\s+/i, ''),
+      baseQuery.replace(/\s+/g, ' ').trim()
     ].filter(Boolean);
 
     const pagesById = new Map();
