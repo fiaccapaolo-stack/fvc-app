@@ -176,6 +176,7 @@
     </div>
     <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel (Samsung, Apple, Xiaomi, Oppo, Realme, Honor)</button>
     <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack” o “_sv”. Poi pubblica il catalogo una sola volta.</p>
+    <button id="reset-catalog-btn" type="button" class="danger" style="width:100%; margin-top:8px;">🗑️ Svuota tutto il catalogo (Smartphone, Accessori, Ricambi)</button>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
     <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
     <input type="file" id="brand-import-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
@@ -325,15 +326,22 @@
   // Converte la prima pagina di un PDF in un'immagine, cosi' si puo'
   // caricare direttamente il volantino PDF di un gestore senza doverlo
   // prima trasformare a mano in foto.
-  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900) {
+  // Se forceLandscape e' true e la pagina risulta verticale, la ruota di
+  // 90° cosi' i volantini vengono sempre mostrati in orizzontale.
+  async function renderPdfFirstPageToDataUrl(file, maxWidth = 900, forceLandscape = false) {
     if (typeof pdfjsLib === 'undefined') throw new Error('Libreria PDF non disponibile');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const buf = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const page = await pdf.getPage(1);
-    const baseViewport = page.getViewport({ scale: 1 });
+    let baseViewport = page.getViewport({ scale: 1 });
+    let rotation = 0;
+    if (forceLandscape && baseViewport.height > baseViewport.width) {
+      rotation = 90;
+      baseViewport = page.getViewport({ scale: 1, rotation });
+    }
     const scale = maxWidth / baseViewport.width;
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale, rotation });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
@@ -385,7 +393,8 @@
 
   // Legge una foto scelta dall'utente e la ridimensiona/comprime nel
   // browser prima di salvarla, cosi' resta leggera per il database gratuito.
-  function readAndCompressImage(file, maxSize = 480, quality = 0.72) {
+  // Se forceLandscape e' true e la foto e' verticale, la ruota di 90°.
+  function readAndCompressImage(file, maxSize = 480, quality = 0.72, forceLandscape = false) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -395,8 +404,17 @@
           if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
           else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
           const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const rotate = forceLandscape && h > w;
+          if (rotate) {
+            canvas.width = h; canvas.height = w;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(h, 0);
+            ctx.rotate(Math.PI / 2);
+            ctx.drawImage(img, 0, 0, w, h);
+          } else {
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          }
           resolve(canvas.toDataURL('image/jpeg', quality));
         };
         img.onerror = () => reject(new Error('Immagine non valida'));
@@ -1107,6 +1125,18 @@
     }
   });
 
+  document.getElementById('reset-catalog-btn').addEventListener('click', async () => {
+    const total = (config.products.smartphone || []).length
+      + (config.products.accessori || []).length
+      + (config.products.ricambi || []).length;
+    if (!confirm(`Stai per eliminare TUTTI i ${total} prodotti del catalogo (Smartphone, Accessori, Ricambi). Questa azione non si può annullare. Continuare?`)) return;
+    if (!confirm('Sei sicuro? Serve poi premere "Pubblica catalogo" per rendere effettivo lo svuotamento ai clienti.')) return;
+    config.products = { smartphone: [], accessori: [], ricambi: [] };
+    renderProducts();
+    setCatalogDirty(true);
+    toast('Catalogo svuotato in locale. Pubblica per renderlo effettivo.');
+  });
+
   window.removeProduct = async (i) => {
     if (!confirm('Eliminare questo prodotto?')) return;
     config.products[currentCat].splice(i, 1);
@@ -1218,8 +1248,8 @@
       // Risoluzione piu' alta per i piani: spesso e' la foto di un volantino
       // (anche in formato A5), e il testo deve restare leggibile.
       planImageData = isPdfFile(file)
-        ? await renderPdfFirstPageToDataUrl(file, 900)
-        : await readAndCompressImage(file, 900, 0.78);
+        ? await renderPdfFirstPageToDataUrl(file, 900, true)
+        : await readAndCompressImage(file, 900, 0.78, true);
       const preview = document.getElementById('pl-image-preview');
       preview.src = planImageData;
       preview.style.display = 'block';
