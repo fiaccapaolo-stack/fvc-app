@@ -756,6 +756,36 @@
     return 'Altri';
   }
 
+  // Modelli Apple e Samsung da mostrare nel catalogo cliente:
+  // Apple: solo iPhone 16 e 17.
+  // Samsung serie S: solo S25 e S26.
+  // Samsung serie A: solo modelli che terminano con 7, a partire da A17
+  // (A17, A27, A37, A47, A57 e così via).
+  function isAllowedAppleSamsungModel(product){
+    const value = normalizeCatalogSearch((product.name || '') + ' ' + (product.spec || ''));
+    const brand = getCatalogBrand(product);
+
+    if (brand === 'Apple'){
+      return value.includes('iphone16') || value.includes('iphone17');
+    }
+
+    if (brand !== 'Samsung') return true;
+
+    // Serie S: S25 e S26.
+    if (value.includes('galaxys25') || value.includes('galaxys26') ||
+        /\bs25\b/.test(value) || /\bs26\b/.test(value)){
+      return true;
+    }
+
+    // Serie A: solo A17, A27, A37, A47, A57... (ultima cifra 7).
+    const matches = value.match(/(?:^|galaxy|samsung)a([1-9][0-9]*7)(?:$|[^0-9])/);
+    if (matches){
+      return parseInt(matches[1], 10) >= 17;
+    }
+
+    return false;
+  }
+
   function escapeCatalogText(value){
     return String(value ?? '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -799,6 +829,13 @@
     const filtered = originalItems
       .map((p, i) => ({ p, i }))
       .filter(({p}) => {
+        const brand = getCatalogBrand(p);
+
+        // Applica il nuovo limite solo ad Apple e Samsung.
+        if ((brand === 'Apple' || brand === 'Samsung') && !isAllowedAppleSamsungModel(p)){
+          return false;
+        }
+
         if (!query) return true;
         const model = normalizeCatalogSearch(p.name);
         const spec = normalizeCatalogSearch(p.spec);
