@@ -732,9 +732,19 @@
           return m === 30 && !isExcludedProductName(rname);
         });
         if (matches.length === 0) return;
-        const uniqueMatches = matches.filter((r, matchIndex) =>
+        let uniqueMatches = matches.filter((r, matchIndex) =>
           matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
         );
+        // Teniamo solo le 2 opzioni con la rata mensile piu' bassa.
+        uniqueMatches.sort((a, b) => {
+          const pa = amountCol ? parseFlexibleNumber(a[amountCol]) : null;
+          const pb = amountCol ? parseFlexibleNumber(b[amountCol]) : null;
+          if (pa === null && pb === null) return 0;
+          if (pa === null) return 1;
+          if (pb === null) return -1;
+          return pa - pb;
+        });
+        uniqueMatches = uniqueMatches.slice(0, 2);
         const installments = uniqueMatches.map(r => {
           const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
           const amount = amountCol ? String(r[amountCol] || '').trim() : '';
@@ -844,30 +854,44 @@
         return;
       }
 
-      // Raggruppiamo per nome prodotto (normalizzato), cosi' se lo stesso
-      // modello compare piu' volte prendiamo solo la prima occorrenza utile.
+      // Raggruppiamo per nome prodotto (normalizzato), tenendo tutte le
+      // varianti trovate: serviranno per scegliere le 2 rate piu' economiche.
       const grouped = new Map();
       filtered.forEach(r => {
         const key = normalizeProductName(r[nameCol]);
-        if (!grouped.has(key)) grouped.set(key, r);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(r);
       });
 
       const smartphones = config.products.smartphone || [];
-      brandImportResults = [...grouped.values()].map(r => {
+      brandImportResults = [...grouped.values()].map(groupRows => {
+        // Ordiniamo le varianti per rata mensile crescente e teniamo solo le 2 piu' basse.
+        const sorted = groupRows.slice().sort((a, b) => {
+          const pa = amountCol ? parseFlexibleNumber(a[amountCol]) : null;
+          const pb = amountCol ? parseFlexibleNumber(b[amountCol]) : null;
+          if (pa === null && pb === null) return 0;
+          if (pa === null) return 1;
+          if (pb === null) return -1;
+          return pa - pb;
+        });
+        const cheapest = sorted.slice(0, 2);
+        const r = sorted[0];
         const rawName = String(r[nameCol] || '').trim();
         const price = priceCol ? parseFlexibleNumber(r[priceCol]) : null;
         const spec = gammaCol ? String(r[gammaCol] || '').trim() : '';
-        const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
-        const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-        const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
-        const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
-        const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
-        const installments = (months || amount) ? [{
-          months: months ? `${months} rate` : '',
-          amount: amount ? `${amount}€/mese` : '',
-          total: totalVal ? `${totalVal.toFixed(2)}€` : '',
-          discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
-        }] : [];
+        const installments = cheapest.map(row => {
+          const months = monthsCol ? String(row[monthsCol] || '').trim() : '';
+          const amount = amountCol ? String(row[amountCol] || '').trim() : '';
+          const discountPct = discountPctCol ? parseFlexibleNumber(row[discountPctCol]) : null;
+          const discountVal = discountCol ? parseFlexibleNumber(row[discountCol]) : null;
+          const totalVal = totalCol ? parseFlexibleNumber(row[totalCol]) : null;
+          return {
+            months: months ? `${months} rate` : '',
+            amount: amount ? `${amount}€/mese` : '',
+            total: totalVal ? `${totalVal.toFixed(2)}€` : '',
+            discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
+          };
+        }).filter(inst => inst.months || inst.amount);
         const existingIndex = smartphones.findIndex(p => productNamesMatch(p.name, rawName));
         return {
           name: rawName,
@@ -883,7 +907,7 @@
       document.getElementById('brand-import-summary').textContent =
         `Trovati ${brandImportResults.length} smartphone tra i marchi selezionati: ${newCount} nuovi, ${updateCount} già presenti (verranno aggiornati prezzo e rata).`;
       document.getElementById('brand-import-preview').innerHTML = brandImportResults.map(r =>
-        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments[0].months} da ${r.installments[0].amount}` : ''}`
+        `${r.existingIndex >= 0 ? '🔄' : '🆕'} <strong>${r.name}</strong> — ${r.price || 'prezzo n.d.'}${r.installments.length ? ` · ${r.installments.map(i => `${i.months} da ${i.amount}`).join(' o ')}` : ''}`
       ).join('<br>');
       document.getElementById('brand-import-card').style.display = 'block';
       document.getElementById('brand-import-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
