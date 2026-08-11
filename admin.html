@@ -941,38 +941,12 @@
     overlay.style.display = 'none';
   }
 
+  // Caricamento automatico delle foto disattivato.
+  // Le immagini dei prodotti vengono inserite/modificate manualmente dall'admin.
   async function enrichProductsWithCommonsImages(results){
-    const pending = results.filter(r => r.needsOfficialImage);
-    if (!pending.length) return;
-
-    let completed = 0;
-    const total = pending.length;
-    const queue = pending.slice();
-    showPhotoProgress(total);
-
-    const worker = async () => {
-      while (queue.length){
-        const item = queue.shift();
-        if (!item) return;
-        setPhotoProgress(completed, total, item.name);
-        try{
-          const official = await findOfficialManufacturerImage(item.name);
-          if (official) item.image = official;
-        }catch(err){
-          console.warn('Errore foto ufficiale per', item.name, err);
-        }
-        completed += 1;
-        setPhotoProgress(completed, total, completed < total ? 'Preparazione prossimo prodotto...' : 'Foto ufficiali completate.');
-      }
-    };
-
-    try{
-      await Promise.all([worker(), worker(), worker()]);
-    } finally {
-      setPhotoProgress(total, total, 'Foto ufficiali completate.');
-      setTimeout(hidePhotoProgress, 500);
-    }
+    return results;
   }
+
 
   // Stesso filtro usato nel catalogo cliente:
   // Apple -> solo iPhone 16 e 17
@@ -1144,7 +1118,8 @@
           r.needsOfficialImage = false;
         }
       });
-      await enrichProductsWithCommonsImages(brandImportResults);
+    // Foto gestite manualmente dall'admin.
+
 
       const newCount = brandImportResults.filter(r => r.existingIndex < 0).length;
       const updateCount = brandImportResults.length - newCount;
@@ -1700,18 +1675,6 @@
     }
   });
 </script>
-
-<div id="photo-progress-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:20px;">
-  <div style="width:min(460px,100%); background:var(--card,#fff); border:1px solid var(--border,#ddd); border-radius:16px; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.3);">
-    <div style="font-size:18px; font-weight:700; margin-bottom:6px;">📷 Caricamento foto prodotti</div>
-    <div id="photo-progress-status" style="font-size:13px; color:var(--text-dim,#777); margin-bottom:14px;">Preparazione ricerca foto...</div>
-    <div style="height:10px; background:var(--border,#ddd); border-radius:99px; overflow:hidden;">
-      <div id="photo-progress-bar" style="height:100%; width:0%; transition:width .25s ease; background:var(--gold,#c99b4a);"></div>
-    </div>
-    <div id="photo-progress-count" style="font-size:13px; margin-top:10px; text-align:center;">0 / 0</div>
-    <div style="font-size:11px; color:var(--text-dim,#777); text-align:center; margin-top:8px;">Non chiudere questa pagina fino al completamento.</div>
-  </div>
-</div>
 
 </body>
 </html>
