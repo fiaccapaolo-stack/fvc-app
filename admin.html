@@ -172,24 +172,12 @@
     <div id="products-list"></div>
     <div class="cta-row2">
       <button id="add-product-btn" type="button">+ Nuovo prodotto</button>
-      <button id="bulk-rate-update-btn" type="button" class="secondary">🔄 Aggiorna rate da Excel (tutti)</button>
     </div>
-    <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Popola catalogo Smartphone da Excel (Samsung, Apple, Xiaomi, Oppo, Realme, Honor)</button>
-    <p class="hint" style="margin-top:10px;">Carica il listino Excel: saranno importate automaticamente solo le offerte smartphone a 30 rate, escludendo i prodotti con dicitura “pack” o “_sv”. Poi pubblica il catalogo una sola volta.</p>
+    <button id="brand-import-btn" type="button" class="secondary" style="width:100%; margin-top:8px;">📱 Carica catalogo e rate da Excel</button>
+    <p class="hint" style="margin-top:10px;">Un solo caricamento aggiorna insieme catalogo e rate. Restano attivi tutti i filtri: marchi selezionati, 30 rate, codici finanziamento FN07S/FN07U, esclusione “pack” e “_sv”, prezzo più basso e filtro modelli Apple/Samsung.</p>
     <button id="reset-catalog-btn" type="button" class="danger" style="width:100%; margin-top:8px;">🗑️ Svuota tutto il catalogo (Smartphone, Accessori, Ricambi)</button>
     <button id="publish-catalog-btn" type="button" class="secondary" style="width:100%; margin-top:10px;" disabled>Pubblica catalogo e avvisa i clienti</button>
-    <input type="file" id="bulk-rate-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
     <input type="file" id="brand-import-excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
-
-    <div class="card" id="bulk-rate-card" style="display:none; margin-top:12px;">
-      <p class="section-title" style="margin-top:0;">Aggiornamento rate in blocco</p>
-      <p class="hint" id="bulk-rate-summary"></p>
-      <div id="bulk-rate-preview" style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px;"></div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-bulk-rate">Annulla</button>
-        <button id="confirm-bulk-rate">Aggiorna e pubblica</button>
-      </div>
-    </div>
 
     <div class="card" id="brand-import-card" style="display:none; margin-top:12px;">
       <p class="section-title" style="margin-top:0;">Popolamento catalogo da Excel</p>
@@ -675,144 +663,7 @@
   }
   document.getElementById('add-product-btn').addEventListener('click', () => openProductForm(-1));
 
-  // ---- aggiornamento rate in blocco: un file Excel aggiorna tutti gli
-  // smartphone del catalogo il cui nome corrisponde a una riga del listino ----
-  let bulkRateResults = []; // { productIndex, name, installments }
-
-  document.getElementById('bulk-rate-update-btn').addEventListener('click', () => {
-    document.getElementById('bulk-rate-excel-input').click();
-  });
-
-  document.getElementById('bulk-rate-excel-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (typeof XLSX === 'undefined') {
-      toast('Libreria di lettura Excel non disponibile.', true);
-      return;
-    }
-    try {
-      const workbook = await readWorkbookSmart(file);
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', blankrows: false });
-      if (raw.length === 0) { toast('Il file sembra vuoto.', true); return; }
-      let headerRowIdx = 0, maxCount = -1;
-      for (let i = 0; i < Math.min(20, raw.length); i++) {
-        const count = raw[i].filter(c => c !== '' && c !== null && c !== undefined).length;
-        if (count > maxCount) { maxCount = count; headerRowIdx = i; }
-      }
-      const headers = raw[headerRowIdx].map((h, i) => String(h || '').trim() || `Colonna ${i + 1}`);
-      let rows = raw.slice(headerRowIdx + 1)
-        .filter(r => r.some(c => c !== '' && c !== null && c !== undefined))
-        .map(r => {
-          const obj = {};
-          headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
-          return obj;
-        });
-      let truncated = false;
-      if (rows.length > 20000) { rows = rows.slice(0, 20000); truncated = true; }
-
-      const nameCol = guessColumn(headers, ['prodotto', 'modello', 'dispositivo', 'device', 'nome']) || headers[0];
-      const monthsCol = guessColumn(headers, ['rate (', 'n. rate', 'numero rate', 'durata']);
-      const amountCol = guessColumn(headers, ['rata incluso', 'rata', 'canone', 'prezzo', 'importo']);
-      const priceCol = guessColumn(headers, ['pap', 'prezzo', 'listino']);
-      const discountPctCol = guessColumn(headers, ['sconto %', 'sconto%']);
-      const discountCol = guessColumn(headers, ['sconto']);
-      const totalCol = guessColumn(headers, ['valore_rt', 'valore rt']);
-      const financeCodeCol = guessColumn(headers, ['codice fin', 'codicefin', 'codice_fin']);
-      if (truncated) toast('File molto grande: analizzate solo le prime 8000 righe con dati.');
-
-      // Per ogni smartphone gia' in catalogo, cerchiamo tutte le righe del
-      // listino il cui nome prodotto contiene (o e' contenuto in) il nome
-      // dello smartphone. Mostriamo solo 30 rate ed escludiamo i "pack".
-      const smartphones = config.products.smartphone || [];
-      bulkRateResults = [];
-      smartphones.forEach((product, idx) => {
-        const matches = rows.filter(r => {
-          const rname = String(r[nameCol] || '');
-          if (!productNamesMatch(rname, product.name)) return false;
-          if (isExcludedProductName(rname)) return false;
-          const m = parseInt(String(r[monthsCol] || '').replace(/\D/g, ''), 10);
-          if (m !== 30) return false;
-          if (!isValidFinanceCode(financeCodeCol ? r[financeCodeCol] : '')) return false;
-          return true;
-        });
-        if (matches.length === 0) return;
-        let uniqueMatches = matches.filter((r, matchIndex) =>
-          matches.findIndex(candidate => JSON.stringify(candidate) === JSON.stringify(r)) === matchIndex
-        );
-
-        // Prima scegliamo il prezzo smartphone piu' basso; poi, tra le righe
-        // con quel prezzo, scegliamo le rate mensili piu' basse. In questo modo
-        // prezzo e rata appartengono sempre alla stessa offerta Excel.
-        const pricedMatches = uniqueMatches
-          .map(row => ({ row, price: priceCol ? parseFlexibleNumber(row[priceCol]) : null }))
-          .filter(x => x.price !== null);
-        if (pricedMatches.length) {
-          const minPrice = Math.min(...pricedMatches.map(x => x.price));
-          uniqueMatches = pricedMatches
-            .filter(x => Math.abs(x.price - minPrice) < 0.005)
-            .map(x => x.row);
-        }
-        uniqueMatches.sort((a, b) => {
-          const pa = amountCol ? parseFlexibleNumber(a[amountCol]) : null;
-          const pb = amountCol ? parseFlexibleNumber(b[amountCol]) : null;
-          if (pa === null && pb === null) return 0;
-          if (pa === null) return 1;
-          if (pb === null) return -1;
-          return pa - pb;
-        });
-        uniqueMatches = uniqueMatches.slice(0, 2);
-        const installments = uniqueMatches.map(r => {
-          const months = monthsCol ? String(r[monthsCol] || '').trim() : '';
-          const amount = amountCol ? String(r[amountCol] || '').trim() : '';
-          const discountPct = discountPctCol ? parseFlexibleNumber(r[discountPctCol]) : null;
-          const discountVal = discountCol ? parseFlexibleNumber(r[discountCol]) : null;
-          const totalVal = totalCol ? parseFlexibleNumber(r[totalCol]) : null;
-          return {
-            months: months ? `${months} rate` : '',
-            amount: amount ? `${amount}€/mese` : '',
-            total: totalVal ? `${totalVal.toFixed(2)}€` : '',
-            discount: discountVal ? `${discountVal.toFixed(2)}€${discountPct ? ` (${(discountPct * 100).toFixed(1)}%)` : ''}` : ''
-          };
-        }).filter(r => r.months || r.amount);
-        if (installments.length) {
-          bulkRateResults.push({ productIndex: idx, name: product.name, installments });
-        }
-      });
-
-      if (bulkRateResults.length === 0) {
-        toast('Nessuna corrispondenza trovata tra il catalogo e questo listino.', true);
-        return;
-      }
-
-      document.getElementById('bulk-rate-summary').textContent =
-        `Trovate corrispondenze per ${bulkRateResults.length} smartphone su ${smartphones.length} in catalogo.`;
-      document.getElementById('bulk-rate-preview').innerHTML = bulkRateResults.map(r =>
-        `<strong>${r.name}</strong>: ${r.installments.map(i => `${i.months} da ${i.amount}`).join(', ')}`
-      ).join('<br><br>');
-      document.getElementById('bulk-rate-card').style.display = 'block';
-      document.getElementById('bulk-rate-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch (err) {
-      toast('Errore nella lettura del file: ' + err.message, true);
-    }
-    e.target.value = '';
-  });
-
-  document.getElementById('cancel-bulk-rate').addEventListener('click', () => {
-    document.getElementById('bulk-rate-card').style.display = 'none';
-  });
-
-  document.getElementById('confirm-bulk-rate').addEventListener('click', async () => {
-    bulkRateResults.forEach(r => {
-      config.products.smartphone[r.productIndex].installments = r.installments;
-    });
-    document.getElementById('bulk-rate-card').style.display = 'none';
-    if (currentCat === 'smartphone') renderProducts();
-    setCatalogDirty(true);
-    toast(`Rate aggiornate per ${bulkRateResults.length} smartphone. Pubblica il catalogo quando hai finito.`);
-  });
-
-  // ---- popola il catalogo Smartphone da Excel, solo per i marchi scelti ----
+  // ---- caricamento unico catalogo + rate da Excel ----
   const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
   let brandImportResults = []; // { name, spec, price, installments, existingIndex }
 
