@@ -667,15 +667,14 @@
   const BRAND_KEYWORDS = ['samsung', 'apple', 'iphone', 'xiaomi', 'redmi', 'oppo', 'realme', 'honor'];
   let brandImportResults = []; // { name, spec, price, installments, existingIndex }
 
-  // ===== Foto automatiche da Wikimedia Commons =====
-  // Cerca la foto del MODELLO, non della variante commerciale (GB, colore, _sv...).
-  // Una foto manuale esistente ha sempre la precedenza.
-  const commonsImageCache = new Map();
+  // ===== Foto automatiche da Openverse =====
+  // Openverse indicizza immagini con licenze aperte. Usiamo solo fotografie
+  // e una selezione molto conservativa per evitare immagini fuori modello.
+  const openverseImageCache = new Map();
 
   function getPhotoSearchName(productName){
     let value = String(productName || '').trim();
 
-    // Togliamo elementi che non servono per identificare il modello.
     value = value
       .replace(/[_-]?sv\b/ig, '')
       .replace(/\b\d+\s*(?:gb|tb)\b/ig, '')
@@ -686,19 +685,15 @@
 
     const n = normalizeProductName(value);
 
-    // Apple: iPhone 16 / 17 e relative varianti.
     let m = n.match(/iphone(16|17)(promax|pro|plus|e)?/);
     if (m){
-      const family = m[1];
       const suffix = m[2] === 'promax' ? ' Pro Max'
         : m[2] === 'pro' ? ' Pro'
         : m[2] === 'plus' ? ' Plus'
         : m[2] === 'e' ? 'e' : '';
-      // Per iPhone preferiamo esplicitamente una vista posteriore.
-      return `iPhone ${family}${suffix} back rear back view`;
+      return `iPhone ${m[1]}${suffix}`;
     }
 
-    // Samsung serie S.
     m = n.match(/(?:samsung)?galaxys(25|26)(edge|plus|ultra|fe)?/);
     if (m){
       const suffix = m[2] === 'edge' ? ' Edge'
@@ -708,121 +703,118 @@
       return `Samsung Galaxy S${m[1]}${suffix}`;
     }
 
-    // Samsung serie A ammessa.
     m = n.match(/(?:samsung)?galaxya([1-9][0-9]*7)/);
     if (m) return `Samsung Galaxy A${m[1]}`;
 
     return value;
   }
 
-  function commonsCandidateScore(title, target){
-    const t = normalizeProductName(title);
+  function openverseScore(item, target){
+    const title = String(item.title || '');
+    const tags = Array.isArray(item.tags)
+      ? item.tags.map(t => String(t.name || t)).join(' ')
+      : '';
+    const hay = normalizeProductName(`${title} ${tags}`);
     const q = normalizeProductName(target);
-    if (!t || !q) return -999;
 
+    if (!hay || !q) return -999;
+
+    const tokens = q.match(/[a-z]+\d*|\d+/g) || [];
     let score = 0;
 
-    // Il modello deve essere riconoscibile nel titolo.
-    if (t === q) score += 180;
-    if (t.includes(q)) score += 120;
-    if (q.includes(t)) score += 40;
+    // Tutti i token fondamentali del modello devono comparire.
+    const missing = tokens.filter(t => t.length >= 2 && !hay.includes(t));
+    if (missing.length) return -500 - missing.length;
 
-    // Punteggio per le parole significative del modello.
-    const tokens = q.match(/[a-z]+\d*|\d+/g) || [];
-    for (const token of tokens){
-      if (token.length >= 2 && t.includes(token)) score += 12;
+    score += tokens.filter(t => t.length >= 2 && hay.includes(t)).length * 30;
+
+    if (hay.includes(q)) score += 160;
+
+    // Marchio e famiglia telefono.
+    if (/iphone/.test(q) && /iphone/.test(hay)) score += 60;
+    if (/samsung|galaxy/.test(q) && (/samsung|galaxy/.test(hay))) score += 60;
+
+    // Preferiamo fotografie vere.
+    if (String(item.category || '').toLowerCase() === 'photograph') score += 35;
+
+    // Evitiamo risultati evidentemente non utili come foto prodotto.
+    if (/logo|icon|wallpaper|screenshot|screen\s*shot|box|packaging|case|cover|charger|earbuds|watch|tablet|advertisement|poster/i.test(title + ' ' + tags)){
+      score -= 140;
     }
 
-    if (/iphone|galaxy|samsung|smartphone|mobile/i.test(title)) score += 12;
+    // Se è una foto scattata con quel telefono, non è la foto del telefono.
+    if (/taken\s*with|photographed\s*with|photo\s*by/i.test(title + ' ' + tags)){
+      score -= 100;
+    }
 
-    // Evitiamo immagini che non sono il telefono.
-    if (/logo|icon|wallpaper|screenshot|screen\s*shot|box|packaging|case|cover|charger|earbuds|watch|tablet/i.test(title)) score -= 90;
-    if (/taken\s*with|photographed\s*with|photo\s*by/i.test(title)) score -= 45;
-
-    // Per iPhone vogliamo la parte posteriore, non il display/frontale.
-    if (/iphone/i.test(title) || /iphone/i.test(target)){
-      if (/\b(back|rear|backside|back\s*view|rear\s*view)\b/i.test(title)) score += 80;
-      if (/\b(front|frontside|front\s*view|display|screen)\b/i.test(title)) score -= 100;
+    // Per iPhone preferiamo nettamente il retro.
+    if (/iphone/.test(q)){
+      if (/\b(back|rear|backside|back\s*view|rear\s*view)\b/i.test(title + ' ' + tags)) score += 120;
+      if (/\b(front|frontside|front\s*view|display|screen)\b/i.test(title + ' ' + tags)) score -= 150;
     }
 
     return score;
   }
 
-  async function searchCommonsImages(query){
-    const baseQuery = query.replace(/\s+back\s+rear\s+back\s+view$/i, '').trim();
+  async function searchOpenverseImages(query){
     const variants = [
+      `"${query}"`,
       query,
-      `${baseQuery} back`,
-      `${baseQuery} rear`,
-      baseQuery.replace(/^Apple\s+/i, ''),
-      baseQuery.replace(/^Samsung\s+/i, ''),
-      baseQuery.replace(/\s+/g, ' ').trim()
+      `${query} smartphone`,
+      query.replace(/^Samsung\s+/i, ''),
+      query.replace(/^Apple\s+/i, '')
     ].filter(Boolean);
 
-    const pagesById = new Map();
+    const all = new Map();
 
     for (const q of [...new Set(variants)]){
       const params = new URLSearchParams({
-        action: 'query',
-        generator: 'search',
-        gsrsearch: q,
-        gsrnamespace: '6',
-        gsrlimit: '20',
-        prop: 'imageinfo',
-        iiprop: 'url|mime',
-        iiurlwidth: '900',
-        format: 'json',
-        origin: '*'
+        q,
+        category: 'photograph',
+        page_size: '20',
+        page: '1'
       });
 
-      const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`);
+      const response = await fetch(`https://api.openverse.org/v1/images/?${params.toString()}`);
       if (!response.ok) continue;
 
       const data = await response.json();
-      Object.values(data.query?.pages || {}).forEach(page => {
-        if (page?.pageid != null) pagesById.set(String(page.pageid), page);
-      });
+      for (const item of (data.results || [])){
+        if (item.id) all.set(String(item.id), item);
+      }
 
-      // Se abbiamo già raccolto parecchi candidati, non facciamo richieste inutili.
-      if (pagesById.size >= 30) break;
+      if (all.size >= 50) break;
     }
 
-    return [...pagesById.values()];
+    return [...all.values()];
   }
 
-  async function findCommonsProductImage(productName){
+  async function findOpenverseProductImage(productName){
     const searchName = getPhotoSearchName(productName);
     if (!searchName) return '';
 
     const cacheKey = normalizeProductName(searchName);
-    if (commonsImageCache.has(cacheKey)) return commonsImageCache.get(cacheKey);
+    if (openverseImageCache.has(cacheKey)) return openverseImageCache.get(cacheKey);
 
-    try {
-      const pages = await searchCommonsImages(searchName);
-      const candidates = pages.map(page => {
-        const title = String(page.title || '').replace(/^File:/i, '');
-        const info = page.imageinfo?.[0];
-        const mime = String(info?.mime || '').toLowerCase();
+    try{
+      const results = await searchOpenverseImages(searchName);
 
-        if (!info?.thumburl || !/^image\/(jpeg|png|webp)$/.test(mime)) return null;
+      const candidates = results.map(item => ({
+        item,
+        score: openverseScore(item, searchName),
+        url: item.thumbnail || item.url || ''
+      }))
+      .filter(x => x.url && x.score >= 170)
+      .sort((a,b) => b.score - a.score);
 
-        const score = commonsCandidateScore(title, searchName);
-        return {
-          url: info.thumburl,
-          title,
-          score
-        };
-      }).filter(Boolean).sort((a, b) => b.score - a.score);
-
-      // Soglia prudente: meglio nessuna foto che una foto di un modello diverso.
       const best = candidates[0];
-      const url = best && best.score >= 55 ? best.url : '';
+      const url = best ? best.url : '';
 
-      commonsImageCache.set(cacheKey, url);
+      openverseImageCache.set(cacheKey, url);
       return url;
-    } catch (err) {
-      console.warn('Ricerca immagine Commons fallita per', searchName, err);
-      commonsImageCache.set(cacheKey, '');
+    }catch(err){
+      console.warn('Ricerca immagine Openverse fallita per', searchName, err);
+      openverseImageCache.set(cacheKey, '');
       return '';
     }
   }
@@ -840,14 +832,12 @@
         const item = queue.shift();
         if (!item) return;
 
-        item.image = await findCommonsProductImage(item.name);
+        item.image = await findOpenverseProductImage(item.name);
         completed += 1;
-
         toast(`Ricerca foto automatica: ${completed}/${total}`);
       }
     };
 
-    // Tre richieste concorrenti per non martellare l'API.
     await Promise.all([worker(), worker(), worker()]);
   }
 
