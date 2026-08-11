@@ -594,12 +594,23 @@
   }
 
   function setCatalogDirty(isDirty){
-    catalogDirty = isDirty;
+    catalogDirty = !!isDirty;
     const button = document.getElementById('publish-catalog-btn');
-    button.disabled = !isDirty;
-    button.textContent = isDirty
-      ? 'Pubblica catalogo e avvisa i clienti'
-      : 'Catalogo già pubblicato';
+    if (!button) return;
+
+    if (catalogDirty){
+      // Forziamo lo stato attivo anche nei browser che mantengono lo stile
+      // disabled dopo una lunga elaborazione asincrona.
+      button.disabled = false;
+      button.removeAttribute('disabled');
+      button.textContent = 'Pubblica catalogo e avvisa i clienti';
+      button.classList.add('ready-to-publish');
+    } else {
+      button.disabled = true;
+      button.setAttribute('disabled', 'disabled');
+      button.textContent = 'Catalogo già pubblicato';
+      button.classList.remove('ready-to-publish');
+    }
   }
 
   function setStock(v){
@@ -819,6 +830,37 @@
     }
   }
 
+  function setPhotoProgress(completed, total, currentName = ''){
+    const overlay = document.getElementById('photo-progress-overlay');
+    const bar = document.getElementById('photo-progress-bar');
+    const count = document.getElementById('photo-progress-count');
+    const status = document.getElementById('photo-progress-status');
+
+    if (!overlay) return;
+
+    const pct = total ? Math.round((completed / total) * 100) : 0;
+    bar.style.width = `${pct}%`;
+    count.textContent = `${completed} / ${total} (${pct}%)`;
+    status.textContent = currentName
+      ? `Ricerca foto: ${currentName}`
+      : 'Preparazione ricerca foto...';
+  }
+
+  function showPhotoProgress(total){
+    const overlay = document.getElementById('photo-progress-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    setPhotoProgress(0, total);
+  }
+
+  function hidePhotoProgress(){
+    const overlay = document.getElementById('photo-progress-overlay');
+    if (!overlay) return;
+    document.getElementById('photo-progress-status').textContent = 'Completato.';
+    document.getElementById('photo-progress-bar').style.width = '100%';
+    overlay.style.display = 'none';
+  }
+
   async function enrichProductsWithCommonsImages(results){
     const pending = results.filter(r => !r.image);
     if (!pending.length) return;
@@ -827,19 +869,36 @@
     const total = pending.length;
     const queue = pending.slice();
 
+    // Il pannello rimane visibile per TUTTA la fase di ricerca.
+    showPhotoProgress(total);
+
     const worker = async () => {
       while (queue.length){
         const item = queue.shift();
         if (!item) return;
 
-        item.image = await findOpenverseProductImage(item.name);
+        setPhotoProgress(completed, total, item.name);
+
+        try {
+          item.image = await findOpenverseProductImage(item.name);
+        } catch (err) {
+          item.image = '';
+          console.warn('Errore foto per', item.name, err);
+        }
+
         completed += 1;
-        toast(`Ricerca foto automatica: ${completed}/${total}`);
+        setPhotoProgress(completed, total, completed < total ? 'Preparazione prossimo prodotto...' : 'Foto completate.');
       }
     };
 
-    await Promise.all([worker(), worker(), worker()]);
+    try {
+      await Promise.all([worker(), worker(), worker()]);
+    } finally {
+      setPhotoProgress(total, total, 'Foto completate.');
+      setTimeout(hidePhotoProgress, 500);
+    }
   }
+
 
   // Stesso filtro usato nel catalogo cliente:
   // Apple -> solo iPhone 16 e 17
@@ -1045,7 +1104,10 @@
     document.getElementById('brand-import-card').style.display = 'none';
     if (currentCat === 'smartphone') renderProducts();
     setCatalogDirty(true);
-    toast(`Catalogo aggiornato: ${brandImportResults.length} smartphone pronti. Pubblica il catalogo quando hai finito.`);
+    const publishBtn = document.getElementById('publish-catalog-btn');
+    publishBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    publishBtn.focus({ preventScroll: true });
+    toast(`Catalogo aggiornato: ${brandImportResults.length} smartphone pronti. Ora puoi premere "Pubblica catalogo e avvisa i clienti".`);
   });
 
   document.getElementById('cancel-product').addEventListener('click', () => {
@@ -1555,5 +1617,18 @@
     }
   });
 </script>
+
+<div id="photo-progress-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:20px;">
+  <div style="width:min(460px,100%); background:var(--card,#fff); border:1px solid var(--border,#ddd); border-radius:16px; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="font-size:18px; font-weight:700; margin-bottom:6px;">📷 Caricamento foto prodotti</div>
+    <div id="photo-progress-status" style="font-size:13px; color:var(--text-dim,#777); margin-bottom:14px;">Preparazione ricerca foto...</div>
+    <div style="height:10px; background:var(--border,#ddd); border-radius:99px; overflow:hidden;">
+      <div id="photo-progress-bar" style="height:100%; width:0%; transition:width .25s ease; background:var(--gold,#c99b4a);"></div>
+    </div>
+    <div id="photo-progress-count" style="font-size:13px; margin-top:10px; text-align:center;">0 / 0</div>
+    <div style="font-size:11px; color:var(--text-dim,#777); text-align:center; margin-top:8px;">Non chiudere questa pagina fino al completamento.</div>
+  </div>
+</div>
+
 </body>
 </html>
