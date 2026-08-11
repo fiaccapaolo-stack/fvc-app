@@ -839,11 +839,11 @@
         if (!query) return true;
         const model = normalizeCatalogSearch(p.name);
         const spec = normalizeCatalogSearch(p.spec);
-        const brand = normalizeCatalogSearch(getCatalogBrand(p));
+        const brandKey = normalizeCatalogSearch(getCatalogBrand(p));
 
         return model.includes(query) ||
                spec.includes(query) ||
-               brand.includes(query);
+               brandKey.includes(query);
       });
 
     if (!filtered.length){
