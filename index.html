@@ -886,6 +886,7 @@
     if (OPEN_BRANDS.has(key)) OPEN_BRANDS.delete(key);
     else OPEN_BRANDS.add(key);
     renderCatalog('smartphone');
+  openNotificationDestination();
   };
 
   renderCatalog('smartphone');
@@ -971,7 +972,7 @@
         `;
       }
       return `
-      <div class="plan">
+      <div class="plan" data-type="${p.type || ''}">
         <span class="badge ${p.type === 'fibra' ? 'fibra' : 'mobile'}">${p.type === 'fibra' ? 'Fibra' : 'Mobile'}</span>
         <div class="row">
           ${p.image ? `<img class="zoomable" src="${p.image}" alt="${p.name}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
@@ -1165,6 +1166,27 @@
 
   initNotifyButton();
 
+  function openNotificationDestination(){
+    const hash = window.location.hash;
+    if (hash === '#catalogo-smartphone') {
+      const tab = document.querySelector('#tabs .tab[data-cat="smartphone"]');
+      if (tab) {
+        document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        renderCatalog('smartphone');
+        document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else if (hash === '#offerte-mobile') {
+      document.getElementById('gestori')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = document.querySelector('.plan[data-type="mobile"]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (hash === '#offerte-fibra') {
+      document.getElementById('gestori')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = document.querySelector('.plan[data-type="fibra"]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   // ---- service worker ----
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -1207,3 +1229,8 @@
 </script>
 </body>
 </html>
+
+<script>
+// fallback for notification hash changes
+window.addEventListener('hashchange', openNotificationDestination);
+</script>

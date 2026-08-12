@@ -1350,19 +1350,46 @@
     toast('Rata aggiunta al prodotto.');
   };
 
+  function buildSmartNotify(section){
+    if (section === 'smartphone'){
+      return {
+        title: '📱 Nuovo smartphone a listino',
+        body: 'Abbiamo un nuovo smartphone a listino: vieni a scoprire le offerte!',
+        url: '/index.html#catalogo-smartphone'
+      };
+    }
+    if (section === 'mobile'){
+      return {
+        title: '📲 Nuova offerta mobile',
+        body: 'C’è una nuova offerta per il tuo piano mobile: scoprila ora!',
+        url: '/index.html#offerte-mobile'
+      };
+    }
+    if (section === 'fibra'){
+      return {
+        title: '🌐 Nuova offerta fibra',
+        body: 'C’è una nuova offerta fibra: scopri tutti i dettagli!',
+        url: '/index.html#offerte-fibra'
+      };
+    }
+    return {
+      title: '✨ Novità Fvc Project',
+      body: 'Abbiamo aggiornato il catalogo e le offerte: vieni a scoprire le novità!',
+      url: '/index.html#catalogo'
+    };
+  }
+
   async function publishCatalog(successMsg){
     if (!catalogDirty) return;
     const button = document.getElementById('publish-catalog-btn');
     button.disabled = true;
     try {
+      const notify = buildSmartNotify('smartphone');
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
         body: JSON.stringify({
           products: config.products,
-          notify: {
-            title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`,
-            body: 'Ci sono novità nel catalogo: prodotti, prezzi o disponibilità aggiornati.'
-          }
+          notify
         })
       });
       setCatalogDirty(false);
@@ -1517,14 +1544,15 @@
     const button = document.getElementById('publish-carriers-btn');
     button.disabled = true;
     try {
+      const currentItems = config.carriers[currentCarrier] || [];
+      const carrierTypes = currentItems.map(x => x.type).filter(Boolean);
+      const section = carrierTypes.includes('fibra') ? 'fibra' : 'mobile';
+      const notify = buildSmartNotify(section);
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
         body: JSON.stringify({
           carriers: config.carriers,
-          notify: {
-            title: `${config.shopName || 'Fvc Project'} · Offerte aggiornate`,
-            body: 'Abbiamo aggiornato le offerte di telefonia e fibra. Tocca per scoprirle.'
-          }
+          notify
         })
       });
       setCarriersDirty(false);
