@@ -163,6 +163,7 @@ const DEFAULT_CONFIG = {
     very: [],
     kena: [],
   },
+  news: [],
 };
 
 async function getConfig() {
@@ -178,10 +179,23 @@ async function getConfig() {
     products: parsed.products || DEFAULT_CONFIG.products,
     carriers: parsed.carriers || DEFAULT_CONFIG.carriers,
     installments: parsed.installments || DEFAULT_CONFIG.installments,
+    news: Array.isArray(parsed.news) ? parsed.news : [],
   };
 }
 async function saveConfig(config) {
   await redis.set("config", JSON.stringify(config));
+}
+
+async function addNews(config, item) {
+  const entry = {
+    title: String(item.title || "Novità"),
+    description: String(item.description || ""),
+    target: ["catalogo", "telefonia", "offerte"].includes(item.target) ? item.target : "offerte",
+    createdAt: Date.now(),
+  };
+  const updated = { ...config, news: [entry, ...(Array.isArray(config.news) ? config.news : [])].slice(0, 3) };
+  await saveConfig(updated);
+  return updated;
 }
 async function seedConfigIfEmpty() {
   const existing = await getConfig();
@@ -281,8 +295,8 @@ async function main() {
   app.put("/api/admin/config", requireAdmin, async (req, res) => {
     console.log("DEBUG: ricevuto PUT /api/admin/config, campi:", Object.keys(req.body || {}));
     const current = (await getConfig()) || DEFAULT_CONFIG;
-    const { notify, ...body } = req.body || {};
-    const updated = { ...current, ...body };
+    const { notify, news, ...body } = req.body || {};
+    let updated = { ...current, ...body };
     if (body.phone !== undefined) {
       updated.phone = body.phone;
       updated.phoneE164 = normalizePhone(body.phone);
@@ -291,14 +305,11 @@ async function main() {
       updated.whatsapp = body.whatsapp;
       updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
     }
-    await saveConfig(updated);
+    if (news && news.title) updated = await addNews(updated, news);
+    else await saveConfig(updated);
     if (notify && notify.body) {
       console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
-      await sendToAll({
-        title: notify.title || `${updated.shopName} · Novità`,
-        body: notify.body,
-        url: notify.url || "./index.html#offerte",
-      });
+      await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
     }
     res.json(updated);
   });
@@ -314,11 +325,15 @@ async function main() {
     }
     const offer = { id, pct, title, desc: desc || "", heat: Number(heat) || 1, createdAt: Date.now() };
     await saveOffer(offer);
-    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    let cfg = (await getConfig()) || DEFAULT_CONFIG;
+    cfg = await addNews(cfg, {
+      title: `Nuova offerta: ${offer.title}`,
+      description: `${offer.pct}${offer.desc ? ` · ${offer.desc}` : ""}`,
+      target: "offerte",
+    });
     await sendToAll({
       title: `${cfg.shopName} · Nuova offerta`,
       body: `${offer.title}: ${offer.pct}${offer.desc ? ` · ${offer.desc}` : ""}`,
-      url: "./index.html#offerte",
     });
     res.status(201).json(offer);
   });
@@ -337,11 +352,15 @@ async function main() {
       heat: heat !== undefined ? Number(heat) : current.heat,
     };
     await saveOffer(updated);
-    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    let cfg = (await getConfig()) || DEFAULT_CONFIG;
+    cfg = await addNews(cfg, {
+      title: `Offerta aggiornata: ${updated.title}`,
+      description: `${updated.pct}${updated.desc ? ` · ${updated.desc}` : ""}`,
+      target: "offerte",
+    });
     await sendToAll({
       title: `${cfg.shopName} · Offerta aggiornata`,
       body: `${updated.title}: ${updated.pct}${updated.desc ? ` · ${updated.desc}` : ""}`,
-      url: "./index.html#offerte",
     });
     res.json(updated);
   });
@@ -356,9 +375,10 @@ async function main() {
   app.post("/api/admin/notify", requireAdmin, async (req, res) => {
     const { title, body } = req.body || {};
     if (!body) return res.status(400).json({ error: "Scrivi almeno il testo del messaggio" });
-    const cfg = (await getConfig()) || DEFAULT_CONFIG;
+    let cfg = (await getConfig()) || DEFAULT_CONFIG;
+    cfg = await addNews(cfg, { title: title || "Novità", description: body, target: "offerte" });
     console.log("Notifica manuale inviata dal pannello:", body);
-    await sendToAll({ title: title || `${cfg.shopName} · Novità`, body, url: "./index.html#offerte" });
+    await sendToAll({ title: title || `${cfg.shopName} · Novità`, body });
     res.json({ ok: true });
   });
 
