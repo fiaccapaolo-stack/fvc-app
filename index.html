@@ -161,6 +161,15 @@
     -ms-overflow-style:none; scrollbar-width:none;
   }
   .tabs::-webkit-scrollbar{display:none;}
+  .catalog-search{
+    width:100%; box-sizing:border-box; margin:0 0 12px;
+    padding:11px 13px; border-radius:10px;
+    border:1px solid var(--border); background:var(--surface);
+    color:var(--text); font:13px var(--font-mono); outline:none;
+  }
+  .catalog-search:focus{border-color:var(--gold);}
+  .catalog-search::placeholder{color:var(--text-dim);}
+  .catalog-empty{grid-column:1/-1; color:var(--text-dim); margin:8px 0 14px;}
   .tab{
     flex:0 0 auto;
     font-family:var(--font-mono);
@@ -526,6 +535,8 @@
     <button class="tab" data-cat="ricambi">Ricambi</button>
   </div>
 
+  <input id="catalog-search" class="catalog-search" type="search" placeholder="Cerca un prodotto nel catalogo" autocomplete="off" aria-label="Cerca un prodotto nel catalogo">
+
   <div class="products" id="products"></div>
 </section>
 
@@ -713,9 +724,19 @@
     if (img) openLightbox(img.currentSrc || img.src);
   });
 
+  let catalogSearchTerm = '';
+
   function renderCatalog(cat){
     const wrap = document.getElementById('products');
-    wrap.innerHTML = (CATALOG[cat] || []).map((p, i) => `
+    const products = (CATALOG[cat] || []).map((p, i) => ({ p, i })).filter(({ p }) => {
+      const text = `${p.name || ''} ${p.spec || ''}`.toLowerCase();
+      return text.includes(catalogSearchTerm);
+    });
+    if (!products.length) {
+      wrap.innerHTML = '<p class="catalog-empty">Nessun prodotto trovato.</p>';
+      return;
+    }
+    wrap.innerHTML = products.map(({ p, i }) => `
       <div class="card${cat === 'smartphone' ? ' product-card' : ''}" ${cat === 'smartphone' ? `data-cat="${cat}" data-index="${i}"` : ''}>
         <div class="thumb">
           ${p.image
@@ -742,6 +763,12 @@
     document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     renderCatalog(btn.dataset.cat);
+  });
+
+  document.getElementById('catalog-search').addEventListener('input', (e) => {
+    catalogSearchTerm = e.target.value.trim().toLowerCase();
+    const activeTab = document.querySelector('#tabs .tab.active');
+    renderCatalog(activeTab ? activeTab.dataset.cat : 'smartphone');
   });
 
   // ---- popup prodotto: prezzo totale + rateizzazione, al tap su uno smartphone ----

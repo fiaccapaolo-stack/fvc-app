@@ -1,4 +1,4 @@
-const CACHE_NAME = "signalpoint-v2";
+const CACHE_NAME = "signalpoint-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -70,9 +70,6 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Placeholder per push notifications future: quando collegherai un backend
-// con VAPID keys, gestirai qui l'evento "push" per mostrare le notifiche
-// anche ad app chiusa.
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || "Fvc Project";
@@ -80,12 +77,12 @@ self.addEventListener("push", (event) => {
     body: data.body || "Nuova offerta disponibile",
     icon: "./icons/icon-192.png",
     badge: "./icons/icon-192.png",
-    data: { url: "./index.html#offerte" }
+    data: { url: "./index.html" }
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Tap su una notifica: apre (o porta in primo piano) l'app sulla sezione offerte
+// Tap su una notifica: apre (o porta in primo piano) l'app dalla schermata iniziale.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url) || "./index.html";
