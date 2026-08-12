@@ -155,6 +155,19 @@
     margin:0;
   }
 
+  /* ---- novità ---- */
+  .news-section{padding-top:6px;}
+  .news-list{display:grid; gap:10px;}
+  .news-card{
+    background:linear-gradient(135deg, rgba(212,175,55,.15), var(--surface));
+    border:1px solid rgba(212,175,55,.42); border-radius:var(--radius);
+    padding:14px; display:grid; grid-template-columns:1fr auto; gap:8px 12px;
+  }
+  .news-card h4{margin:0; font-size:14px; line-height:1.35; color:var(--gold-soft);}
+  .news-card p{margin:0; color:var(--text-dim); font-size:12.5px; line-height:1.45;}
+  .news-card time{font:10px var(--font-mono); color:var(--text-dim);}
+  .news-card .news-open{align-self:center; padding:8px 11px; font-size:11px;}
+
   /* ---- catalogo ---- */
   .tabs{
     display:flex; gap:8px; overflow-x:auto; padding-bottom:16px;
@@ -519,6 +532,17 @@
     </a>
   </nav>
 </header>
+
+<!-- ===================== NOVITÀ ===================== -->
+<section id="novita" class="news-section" hidden>
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Appena aggiornato</p>
+      <h3>Novità</h3>
+    </div>
+  </div>
+  <div id="news-list" class="news-list"></div>
+</section>
 
 <!-- ===================== CATALOGO ===================== -->
 <section id="catalogo">
@@ -893,6 +917,8 @@
     const footerEl = document.getElementById('shop-footer');
     if (footerEl) footerEl.innerHTML = `${cfg.shopName} · ${cfg.address}`;
 
+    renderNews(cfg.news);
+
     if (cfg.products) {
       CATALOG = cfg.products;
       const activeTab = document.querySelector('#tabs .tab.active');
@@ -905,6 +931,31 @@
       renderCarrierPlans(activeCarrierTab ? activeCarrierTab.dataset.carrier : 'tim');
     }
   }
+
+  function escapeHtml(value){
+    return String(value || '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+  }
+
+  function renderNews(items){
+    const section = document.getElementById('novita');
+    const list = document.getElementById('news-list');
+    const news = Array.isArray(items) ? items.slice(0, 3) : [];
+    if (!news.length) { section.hidden = true; return; }
+    section.hidden = false;
+    list.innerHTML = news.map(item => {
+      const target = ['catalogo', 'telefonia', 'offerte'].includes(item.target) ? item.target : 'offerte';
+      const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+      return `<article class="news-card">
+        <div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.description)}</p><time>${date}</time></div>
+        <button class="btn news-open" type="button" data-news-target="${target}">Vedi</button>
+      </article>`;
+    }).join('');
+  }
+
+  document.getElementById('news-list').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-news-target]');
+    if (button) location.hash = button.dataset.newsTarget;
+  });
 
   fetch('/api/config').then(r => r.ok ? r.json() : Promise.reject()).then(applyShopConfig).catch(() => {});
 

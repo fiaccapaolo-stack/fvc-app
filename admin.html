@@ -414,6 +414,8 @@
   let stockValue = 2;
   let catalogDirty = false;
   let carriersDirty = false;
+  let catalogChanges = [];
+  let carrierChanges = [];
 
   function toast(msg, isError){
     const t = document.getElementById('toast');
@@ -898,6 +900,7 @@
   document.getElementById('confirm-catalog-import').addEventListener('click', () => {
     if (!confirm(`Sostituire il catalogo smartphone con ${catalogImportProducts.length} prodotti importati?`)) return;
     config.products.smartphone = catalogImportProducts;
+    catalogChanges.push(`${catalogImportProducts.length} smartphone importati`);
     document.getElementById('catalog-import-card').style.display = 'none';
     currentCat = 'smartphone';
     document.querySelectorAll('#cat-tabs .cat-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.cat === 'smartphone'));
@@ -1116,10 +1119,16 @@
           notify: {
             title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`,
             body: 'Ci sono novità nel catalogo: prodotti, prezzi o disponibilità aggiornati.'
+          },
+          news: {
+            title: 'Catalogo aggiornato',
+            description: catalogChanges.slice(-3).join(' · ') || 'Prodotti, prezzi o disponibilità aggiornati.',
+            target: 'catalogo'
           }
         })
       });
       setCatalogDirty(false);
+      catalogChanges = [];
       toast(successMsg);
     } catch (err) {
       button.disabled = false;
@@ -1135,7 +1144,9 @@
 
   window.removeProduct = async (i) => {
     if (!confirm('Eliminare questo prodotto?')) return;
+    const removedName = config.products[currentCat][i]?.name || 'Prodotto';
     config.products[currentCat].splice(i, 1);
+    catalogChanges.push(`${removedName} rimosso`);
     renderProducts();
     setCatalogDirty(true);
     toast('Modifica pronta. Pubblica il catalogo quando hai finito.');
@@ -1150,8 +1161,13 @@
     const product = { name, spec, price, stock: stockValue, image: productImageData || '', installments };
     const idx = Number(document.getElementById('p-editing-index').value);
     if (!config.products[currentCat]) config.products[currentCat] = [];
-    if (idx >= 0) config.products[currentCat][idx] = product;
-    else config.products[currentCat].push(product);
+    if (idx >= 0) {
+      config.products[currentCat][idx] = product;
+      catalogChanges.push(`${name} aggiornato`);
+    } else {
+      config.products[currentCat].push(product);
+      catalogChanges.push(`${name} aggiunto`);
+    }
     document.getElementById('product-form-card').style.display = 'none';
     renderProducts();
     setCatalogDirty(true);
@@ -1266,10 +1282,16 @@
           notify: {
             title: `${config.shopName || 'Fvc Project'} · Offerte aggiornate`,
             body: 'Abbiamo aggiornato le offerte di telefonia e fibra. Tocca per scoprirle.'
+          },
+          news: {
+            title: 'Offerte telefonia e fibra aggiornate',
+            description: carrierChanges.slice(-3).join(' · ') || 'Nuove offerte mobile e fibra disponibili.',
+            target: 'telefonia'
           }
         })
       });
       setCarriersDirty(false);
+      carrierChanges = [];
       toast(successMsg);
     } catch (err) {
       button.disabled = false;
@@ -1285,7 +1307,9 @@
 
   window.removePlan = async (i) => {
     if (!confirm('Eliminare questo piano?')) return;
+    const removedName = config.carriers[currentCarrier][i]?.name || 'Offerta';
     config.carriers[currentCarrier].splice(i, 1);
+    carrierChanges.push(`${removedName} rimossa`);
     renderCarrierPlansList();
     setCarriersDirty(true);
     toast('Modifica pronta. Pubblica i gestori quando hai finito.');
@@ -1309,8 +1333,13 @@
     };
     const idx = Number(document.getElementById('pl-editing-index').value);
     if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
-    if (idx >= 0) config.carriers[currentCarrier][idx] = plan;
-    else config.carriers[currentCarrier].push(plan);
+    if (idx >= 0) {
+      config.carriers[currentCarrier][idx] = plan;
+      carrierChanges.push(`${name || 'Offerta'} aggiornata`);
+    } else {
+      config.carriers[currentCarrier].push(plan);
+      carrierChanges.push(`${name || 'Nuova offerta'} aggiunta`);
+    }
     document.getElementById('plan-form-card').style.display = 'none';
     renderCarrierPlansList();
     setCarriersDirty(true);
