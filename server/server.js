@@ -294,7 +294,11 @@ async function main() {
     await saveConfig(updated);
     if (notify && notify.body) {
       console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
-      await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
+      await sendToAll({
+        title: notify.title || `${updated.shopName} · Novità`,
+        body: notify.body,
+        url: notify.url || "./index.html#offerte",
+      });
     }
     res.json(updated);
   });
@@ -314,6 +318,7 @@ async function main() {
     await sendToAll({
       title: `${cfg.shopName} · Nuova offerta`,
       body: `${offer.title}: ${offer.pct}${offer.desc ? ` · ${offer.desc}` : ""}`,
+      url: "./index.html#offerte",
     });
     res.status(201).json(offer);
   });
@@ -336,6 +341,7 @@ async function main() {
     await sendToAll({
       title: `${cfg.shopName} · Offerta aggiornata`,
       body: `${updated.title}: ${updated.pct}${updated.desc ? ` · ${updated.desc}` : ""}`,
+      url: "./index.html#offerte",
     });
     res.json(updated);
   });
@@ -352,7 +358,7 @@ async function main() {
     if (!body) return res.status(400).json({ error: "Scrivi almeno il testo del messaggio" });
     const cfg = (await getConfig()) || DEFAULT_CONFIG;
     console.log("Notifica manuale inviata dal pannello:", body);
-    await sendToAll({ title: title || `${cfg.shopName} · Novità`, body });
+    await sendToAll({ title: title || `${cfg.shopName} · Novità`, body, url: "./index.html#offerte" });
     res.json({ ok: true });
   });
 
