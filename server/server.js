@@ -292,14 +292,10 @@ async function main() {
       updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
     }
     await saveConfig(updated);
-    const notifyBody =
-      (notify && notify.body) ||
-      "Abbiamo aggiornato le informazioni del negozio. Tocca per vedere le novità.";
-    console.log("Modifica pubblicata dal pannello, invio notifica:", notifyBody);
-    await sendToAll({
-      title: (notify && notify.title) || `${updated.shopName} · Novità`,
-      body: notifyBody,
-    });
+    if (notify && notify.body) {
+      console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
+      await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
+    }
     res.json(updated);
   });
 
@@ -345,32 +341,8 @@ async function main() {
   });
 
   app.delete("/api/admin/offers/:id", requireAdmin, async (req, res) => {
-    const existing = await getOffers();
-    const current = existing.find((o) => o.id === req.params.id);
     await deleteOffer(req.params.id);
-    const cfg = (await getConfig()) || DEFAULT_CONFIG;
-    await sendToAll({
-      title: `${cfg.shopName} · Offerta terminata`,
-      body: current ? `${current.title} non è più disponibile.` : "Un'offerta è stata rimossa.",
-    });
     res.json({ ok: true });
-  });
-
-  // Svuotamento totale delle offerte: una sola notifica riepilogativa,
-  // così i clienti non ricevono un messaggio per ogni elemento.
-  app.delete("/api/admin/offers", requireAdmin, async (req, res) => {
-    const existing = await getOffers();
-    for (const offer of existing) {
-      await deleteOffer(offer.id);
-    }
-    const cfg = (await getConfig()) || DEFAULT_CONFIG;
-    if (existing.length) {
-      await sendToAll({
-        title: `${cfg.shopName} · Offerte aggiornate`,
-        body: "Le offerte precedenti sono terminate. Presto ne arrivano di nuove!",
-      });
-    }
-    res.json({ ok: true, deleted: existing.length });
   });
 
   // Invio manuale extra: da usare per annunci non legati a una singola
