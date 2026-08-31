@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fvc Project Srl — Telefonia</title>
 <meta name="description" content="Catalogo, offerte e contatti del negozio Fvc Project Srl">
-<meta name="theme-color" content="#201C4A">
+<meta name="theme-color" content="#F7F9FC">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -16,20 +16,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#201C4A;
-    --bg-top:#2E2A72;
-    --bg-bottom:#141131;
-    --surface:#2A2668;
-    --surface-alt:#342F7C;
-    --border:#463E9E;
-    --text:#EDF1F5;
-    --text-dim:#ACA6DE;
-    --gold:#F0C43D;
-    --gold-soft:#FFE9A8;
-    --cyan:#3EE8F5;
-    --glow-gold:0 0 22px rgba(240,196,61,.38);
-    --glow-gold-soft:0 0 14px rgba(240,196,61,.22);
-    --glow-cyan:0 0 20px rgba(62,232,245,.32);
+    --bg:#F7F9FC;
+    --bg-top:#FFFFFF;
+    --bg-bottom:#E9EFF7;
+    --surface:#FFFFFF;
+    --surface-alt:#EEF2F8;
+    --border:#DCE3EE;
+    --text:#16233F;
+    --text-dim:#647089;
+    --gold:#43A828;
+    --gold-soft:#2F7A1E;
+    --cyan:#1F3B6E;
+    --glow-gold:0 6px 18px rgba(67,168,40,.24);
+    --glow-gold-soft:0 3px 10px rgba(67,168,40,.18);
+    --glow-cyan:0 4px 14px rgba(31,59,110,.18);
     --radius:16px;
     --font-display:'Space Grotesk', system-ui, sans-serif;
     --font-body:'Inter', system-ui, sans-serif;
@@ -40,8 +40,8 @@
   body{
     margin:0;
     background:
-      radial-gradient(120% 60% at 30% -10%, rgba(240,196,61,.16), transparent 60%),
-      radial-gradient(90% 50% at 90% 0%, rgba(62,232,245,.10), transparent 60%),
+      radial-gradient(120% 60% at 30% -10%, rgba(67,168,40,.08), transparent 60%),
+      radial-gradient(90% 50% at 90% 0%, rgba(31,59,110,.06), transparent 60%),
       linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 45%, var(--bg-bottom) 100%);
     background-attachment:fixed;
     color:var(--text);
@@ -74,14 +74,15 @@
   header.hero{padding:8px 24px 28px;}
   .wordmark{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
   .wordmark .bars{display:flex; align-items:flex-end; gap:3px; height:22px;}
-  .wordmark .bars span{width:5px; border-radius:2px; background:var(--gold); box-shadow:0 0 8px rgba(240,196,61,.5);}
+  .wordmark .bars span{width:5px; border-radius:2px; background:var(--gold);}
   .wordmark .bars span:nth-child(1){height:35%; opacity:.5;}
   .wordmark .bars span:nth-child(2){height:60%; opacity:.75;}
   .wordmark .bars span:nth-child(3){height:85%;}
   .wordmark .bars span:nth-child(4){height:100%;}
   .wordmark h1{font-family:var(--font-display); font-size:22px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  .wordmark h1 .brand-accent{color:var(--gold);}
   .hero h2{font-family:var(--font-display); font-size:34px; line-height:1.15; font-weight:600; margin:0 0 10px; max-width:20ch;}
-  .hero h2 .accent{color:var(--gold); text-shadow:0 0 20px rgba(240,196,61,.3);}
+  .hero h2 .accent{color:var(--gold-soft);}
   .hero p.lead{color:var(--text-dim); font-size:15px; max-width:40ch; margin:0 0 26px;}
   .quicktiles{display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;}
   .tile{
@@ -101,8 +102,8 @@
   .news-section{padding-top:6px;}
   .news-list{display:grid; gap:10px;}
   .news-card{
-    background:linear-gradient(135deg, rgba(212,175,55,.15), var(--surface));
-    border:1px solid rgba(212,175,55,.42); border-radius:var(--radius);
+    background:linear-gradient(135deg, rgba(67,168,40,.10), var(--surface));
+    border:1px solid rgba(67,168,40,.35); border-radius:var(--radius);
     padding:14px; display:grid; grid-template-columns:1fr auto; gap:8px 12px;
   }
   .news-card h4{margin:0; font-size:14px; line-height:1.35; color:var(--gold-soft);}
@@ -124,7 +125,7 @@
     flex:0 0 auto; font-family:var(--font-mono); font-size:12.5px; padding:8px 14px;
     border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer;
   }
-  .tab.active{background:var(--gold); border-color:var(--gold); color:#171335; font-weight:600; box-shadow:var(--glow-gold-soft);}
+  .tab.active{background:var(--gold); border-color:var(--gold); color:#FFFFFF; font-weight:600; box-shadow:var(--glow-gold-soft);}
   .products{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;}
   .card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
@@ -133,14 +134,14 @@
   .card.product-card{cursor:pointer;}
   .card.product-card:active{transform:scale(0.98);}
   .card .thumb{
-    height:84px; border-radius:10px; background:linear-gradient(135deg, var(--surface-alt), #3A3480);
+    height:84px; border-radius:10px; background:linear-gradient(135deg, var(--surface-alt), #DDE6F3);
     display:flex; align-items:center; justify-content:center;
   }
   .card .thumb svg{opacity:.9;}
   .card h4{font-size:14px; font-weight:600; margin:0; line-height:1.3;}
   .card .spec{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin:0;}
   .card .row{display:flex; align-items:center; justify-content:space-between; margin-top:auto;}
-  .price{font-family:var(--font-mono); font-weight:600; font-size:15px; color:var(--gold-soft); text-shadow:0 0 12px rgba(240,196,61,.35);}
+  .price{font-family:var(--font-mono); font-weight:600; font-size:15px; color:var(--gold-soft);}
   .installment-preview{margin:0; min-height:15px; color:var(--cyan); font-family:var(--font-mono); font-size:10.5px; line-height:1.35;}
   .installment-preview strong{font-weight:600; color:var(--gold-soft);}
   .stock{display:flex; align-items:flex-end; gap:2px; height:10px;}
@@ -159,7 +160,7 @@
   .notify-card p{margin:0; font-size:12.5px; color:var(--text-dim); line-height:1.4;}
   .btn{
     font-family:var(--font-body); font-weight:600; font-size:13px; padding:10px 16px;
-    border-radius:10px; border:none; background:var(--gold); color:#171335; cursor:pointer; white-space:nowrap;
+    border-radius:10px; border:none; background:var(--gold); color:#FFFFFF; cursor:pointer; white-space:nowrap;
     box-shadow:var(--glow-gold-soft);
     transition:box-shadow .2s ease, transform .15s ease;
   }
@@ -170,7 +171,7 @@
     display:flex; gap:14px; background:var(--surface); border:1px solid var(--border);
     border-radius:var(--radius); padding:14px; margin-bottom:12px; align-items:center;
   }
-  .offer .pct{font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold); width:56px; text-align:center; text-shadow:0 0 14px rgba(240,196,61,.4);}
+  .offer .pct{font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold-soft); width:56px; text-align:center;}
   .offer .body{flex:1;}
   .offer h4{margin:0 0 3px; font-size:14px; font-weight:600;}
   .offer p{margin:0; font-size:12px; color:var(--text-dim);}
@@ -181,13 +182,13 @@
   .plan .row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .plan h4{margin:0 0 3px; font-size:14.5px; font-weight:600;}
   .plan p{margin:0; font-size:12px; color:var(--text-dim); line-height:1.4;}
-  .plan .price{font-family:var(--font-mono); font-weight:600; font-size:14px; color:var(--gold-soft); white-space:nowrap; text-shadow:0 0 10px rgba(240,196,61,.3);}
+  .plan .price{font-family:var(--font-mono); font-weight:600; font-size:14px; color:var(--gold-soft); white-space:nowrap;}
   .plan .badge{
     display:inline-block; font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
     letter-spacing:.05em; padding:2px 8px; border-radius:999px; margin-bottom:6px;
   }
-  .plan .badge.mobile{background:rgba(79,216,232,0.15); color:var(--cyan);}
-  .plan .badge.fibra{background:rgba(212,175,55,0.15); color:var(--gold);}
+  .plan .badge.mobile{background:rgba(31,59,110,0.10); color:var(--cyan);}
+  .plan .badge.fibra{background:rgba(67,168,40,0.12); color:var(--gold);}
   .plan-photo{padding:0; overflow:hidden;}
   .plan-photo img{display:block; width:100%; height:auto; border-radius:var(--radius);}
   .info-list{list-style:none; margin:0 0 20px; padding:0; display:flex; flex-direction:column; gap:14px;}
@@ -266,7 +267,7 @@
     padding-bottom:18px; border-bottom:1px solid var(--border);
   }
   .pm-price-label{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em;}
-  .pm-price-value{font-family:var(--font-mono); font-size:24px; font-weight:600; color:var(--gold-soft); text-shadow:0 0 16px rgba(240,196,61,.4);}
+  .pm-price-value{font-family:var(--font-mono); font-size:24px; font-weight:600; color:var(--gold-soft);}
   .pm-rate-title{font-family:var(--font-mono); font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.08em; margin:0 0 12px;}
   .pm-rate-option{
     display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface-alt);
@@ -294,7 +295,7 @@
 <header class="hero">
   <div class="wordmark">
     <span class="bars"><span></span><span></span><span></span><span></span></span>
-    <h1 id="shop-name">Fvc Project Srl</h1>
+    <h1 id="shop-name"><span class="brand-accent">Fvc</span> Project Srl</h1>
   </div>
   <h2>Il tuo negozio di telefonia, <span class="accent">sempre in tasca.</span></h2>
   <p class="lead">Catalogo aggiornato, offerte in tempo reale e il negozio a un tap di distanza.</p>
@@ -303,19 +304,19 @@
 
   <nav class="quicktiles">
     <a class="tile" href="#catalogo">
-      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#F0C43D" stroke-width="1.6"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#F0C43D" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#1F3B6E" stroke-width="1.6"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#1F3B6E" stroke-width="1.6" stroke-linecap="round"/></svg></span>
       <span class="label">Catalogo</span>
     </a>
     <a class="tile" href="#offerte">
-      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" stroke="#F0C43D" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" stroke="#1F3B6E" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
       <span class="label">Offerte</span>
     </a>
     <a class="tile" href="#telefonia">
-      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 8 7 15 15 15l2-4-5-2-1.5 1.5A11 11 0 0 1 9.5 10L11 8.5 9 3.5 5 4Z" stroke="#F0C43D" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 8 7 15 15 15l2-4-5-2-1.5 1.5A11 11 0 0 1 9.5 10L11 8.5 9 3.5 5 4Z" stroke="#1F3B6E" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
       <span class="label">Telefonia &amp; Fibra</span>
     </a>
     <a class="tile" href="#negozio">
-      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#F0C43D" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.2" stroke="#F0C43D" stroke-width="1.6"/></svg></span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#1F3B6E" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.2" stroke="#1F3B6E" stroke-width="1.6"/></svg></span>
       <span class="label">Negozio</span>
     </a>
   </nav>
@@ -404,21 +405,21 @@
 
   <ul class="info-list">
     <li>
-      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#3EE8F5" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.2" stroke="#3EE8F5" stroke-width="1.6"/></svg></span>
+      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#1F3B6E" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.2" stroke="#1F3B6E" stroke-width="1.6"/></svg></span>
       <div>
         <p class="lbl">Indirizzo</p>
         <p class="val" id="shop-address">Viale Indipendenza 57/a, 63100 Ascoli Piceno</p>
       </div>
     </li>
     <li>
-      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1v3.7c0 .6-.4 1-1 1C10.5 21.3 2.7 13.5 2.7 3.7c0-.6.4-1 1-1h3.7c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.2 1.1L6.6 10.8Z" stroke="#3EE8F5" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1v3.7c0 .6-.4 1-1 1C10.5 21.3 2.7 13.5 2.7 3.7c0-.6.4-1 1-1h3.7c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.2 1.1L6.6 10.8Z" stroke="#1F3B6E" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
       <div>
         <p class="lbl">Telefono</p>
         <a class="val" id="shop-phone" href="tel:+39073646354">0736 46354</a>
       </div>
     </li>
     <li>
-      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13Z" stroke="#3EE8F5" stroke-width="1.5"/><path d="M4 6.5 12 12l8-5.5" stroke="#3EE8F5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13Z" stroke="#1F3B6E" stroke-width="1.5"/><path d="M4 6.5 12 12l8-5.5" stroke="#1F3B6E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <div>
         <p class="lbl">WhatsApp / Email</p>
         <a class="val" id="shop-whatsapp" href="https://wa.me/39333123456" target="_blank" rel="noopener">333 123 456</a>
@@ -545,7 +546,7 @@
         <div class="thumb">
           ${p.image
             ? `<img class="zoomable" src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`
-            : `<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#3EE8F5" stroke-width="1.4" opacity="0.8"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#3EE8F5" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/></svg>`}
+            : `<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#1F3B6E" stroke-width="1.4" opacity="0.8"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#1F3B6E" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/></svg>`}
         </div>
         <h4>${p.name}</h4>
         <p class="spec">${p.spec}</p>
@@ -669,7 +670,15 @@
     if (!cfg) return;
     document.title = `${cfg.shopName} — Telefonia`;
     const setText = (id, val) => { const el = document.getElementById(id); if (el && val) el.textContent = val; };
-    setText('shop-name', cfg.shopName);
+    const nameEl = document.getElementById('shop-name');
+    if (nameEl && cfg.shopName) {
+      const match = cfg.shopName.match(/^(Fvc)(\s+.*)?$/i);
+      if (match) {
+        nameEl.innerHTML = `<span class="brand-accent">${match[1]}</span>${match[2] || ''}`;
+      } else {
+        nameEl.textContent = cfg.shopName;
+      }
+    }
     setText('install-bar-name', `Aggiungi ${cfg.shopName} alla Home`);
     setText('ios-install-bar-name', `Aggiungi ${cfg.shopName} alla Home`);
     setText('shop-address', cfg.address);
