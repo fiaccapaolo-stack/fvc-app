@@ -173,14 +173,33 @@ async function getConfig() {
   // Se la configurazione era gia' salvata prima dell'introduzione di un
   // campo nuovo (es. "carriers"), lo aggiungiamo qui coi valori di partenza,
   // senza toccare il resto di quello che il negozio ha gia' personalizzato.
-  return {
+  let products = parsed.products || DEFAULT_CONFIG.products;
+  // Corregge automaticamente un vecchio formato incompatibile: se "products"
+  // e' un elenco piatto (non diviso per categoria), lo convertiamo qui,
+  // mettendo tutti i prodotti gia' inseriti dentro "smartphone" cosi' non
+  // si perdono.
+  let migrated = false;
+  if (Array.isArray(products)) {
+    products = {
+      smartphone: products,
+      accessori: DEFAULT_CONFIG.products.accessori,
+      ricambi: DEFAULT_CONFIG.products.ricambi,
+    };
+    migrated = true;
+  }
+  const result = {
     ...DEFAULT_CONFIG,
     ...parsed,
-    products: parsed.products || DEFAULT_CONFIG.products,
+    products,
     carriers: parsed.carriers || DEFAULT_CONFIG.carriers,
     installments: parsed.installments || DEFAULT_CONFIG.installments,
     news: Array.isArray(parsed.news) ? parsed.news : [],
   };
+  if (migrated) {
+    console.log("Migrazione automatica: products era un elenco piatto, convertito nella struttura per categoria.");
+    await saveConfig(result);
+  }
+  return result;
 }
 async function saveConfig(config) {
   await redis.set("config", JSON.stringify(config));
