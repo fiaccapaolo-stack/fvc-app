@@ -41,17 +41,10 @@
     padding-bottom:88px;
   }
   a{color:inherit;}
-
-  /* ---- status bar decorativa: richiamo giocoso al telefono, non funzionale ---- */
   .statusbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:10px 18px 6px;
-    font-family:var(--font-mono);
-    font-size:12px;
-    color:var(--text-dim);
-    letter-spacing:0.02em;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 18px 6px; font-family:var(--font-mono); font-size:12px;
+    color:var(--text-dim); letter-spacing:0.02em;
   }
   .statusbar .icons{display:flex; align-items:center; gap:8px;}
   .signalbars{display:flex; align-items:flex-end; gap:2px; height:10px;}
@@ -69,93 +62,33 @@
     background:var(--text-dim); border-radius:0 1px 1px 0;
   }
   .battery i{display:block; height:100%; width:78%; background:var(--gold); border-radius:1px;}
-
-  header.hero{
-    padding:8px 24px 28px;
-  }
-  .wordmark{
-    display:flex; align-items:center; gap:10px; margin-bottom:22px;
-  }
+  header.hero{padding:8px 24px 28px;}
+  .wordmark{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
   .wordmark .bars{display:flex; align-items:flex-end; gap:3px; height:22px;}
   .wordmark .bars span{width:5px; border-radius:2px; background:var(--gold);}
   .wordmark .bars span:nth-child(1){height:35%; opacity:.5;}
   .wordmark .bars span:nth-child(2){height:60%; opacity:.75;}
   .wordmark .bars span:nth-child(3){height:85%;}
   .wordmark .bars span:nth-child(4){height:100%;}
-  .wordmark h1{
-    font-family:var(--font-display); font-size:22px; font-weight:700; margin:0;
-    letter-spacing:-0.01em;
-  }
-  .hero h2{
-    font-family:var(--font-display);
-    font-size:34px;
-    line-height:1.15;
-    font-weight:600;
-    margin:0 0 10px;
-    max-width:20ch;
-  }
+  .wordmark h1{font-family:var(--font-display); font-size:22px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  .hero h2{font-family:var(--font-display); font-size:34px; line-height:1.15; font-weight:600; margin:0 0 10px; max-width:20ch;}
   .hero h2 .accent{color:var(--gold);}
-  .hero p.lead{
-    color:var(--text-dim);
-    font-size:15px;
-    max-width:40ch;
-    margin:0 0 26px;
-  }
-
-  /* ---- griglia rapida stile home screen ---- */
-  .quicktiles{
-    display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:12px;
-  }
+  .hero p.lead{color:var(--text-dim); font-size:15px; max-width:40ch; margin:0 0 26px;}
+  .quicktiles{display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;}
   .tile{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:18px 10px 14px;
-    text-align:center;
-    text-decoration:none;
-    color:var(--text);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 10px 14px; text-align:center; text-decoration:none; color:var(--text);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
     transition:transform .15s ease, border-color .15s ease;
   }
   .tile:active{transform:scale(0.96);}
   .tile:hover{border-color:var(--gold);}
-  .tile .glyph{
-    width:40px; height:40px;
-    border-radius:12px;
-    display:flex; align-items:center; justify-content:center;
-    background:var(--surface-alt);
-  }
+  .tile .glyph{width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--surface-alt);}
   .tile span.label{font-size:12.5px; font-weight:600; letter-spacing:0.01em;}
-
-  section{
-    padding:44px 24px 8px;
-    border-top:1px solid var(--border);
-  }
-  .section-head{
-    display:flex; align-items:baseline; justify-content:space-between;
-    margin-bottom:18px;
-  }
-  .eyebrow{
-    font-family:var(--font-mono);
-    font-size:11px;
-    color:var(--gold);
-    letter-spacing:0.12em;
-    text-transform:uppercase;
-    margin:0 0 6px;
-  }
-  .section-head h3{
-    font-family:var(--font-display);
-    font-size:24px;
-    font-weight:600;
-    margin:0;
-  }
-
-  /* ---- novità ---- */
+  section{padding:44px 24px 8px; border-top:1px solid var(--border);}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; color:var(--gold); letter-spacing:0.12em; text-transform:uppercase; margin:0 0 6px;}
+  .section-head h3{font-family:var(--font-display); font-size:24px; font-weight:600; margin:0;}
   .news-section{padding-top:6px;}
   .news-list{display:grid; gap:10px;}
   .news-card{
@@ -167,12 +100,7 @@
   .news-card p{margin:0; color:var(--text-dim); font-size:12.5px; line-height:1.45;}
   .news-card time{font:10px var(--font-mono); color:var(--text-dim);}
   .news-card .news-open{align-self:center; padding:8px 11px; font-size:11px;}
-
-  /* ---- catalogo ---- */
-  .tabs{
-    display:flex; gap:8px; overflow-x:auto; padding-bottom:16px;
-    -ms-overflow-style:none; scrollbar-width:none;
-  }
+  .tabs{display:flex; gap:8px; overflow-x:auto; padding-bottom:16px; -ms-overflow-style:none; scrollbar-width:none;}
   .tabs::-webkit-scrollbar{display:none;}
   .catalog-search{
     width:100%; box-sizing:border-box; margin:0 0 12px;
@@ -184,205 +112,91 @@
   .catalog-search::placeholder{color:var(--text-dim);}
   .catalog-empty{grid-column:1/-1; color:var(--text-dim); margin:8px 0 14px;}
   .tab{
-    flex:0 0 auto;
-    font-family:var(--font-mono);
-    font-size:12.5px;
-    padding:8px 14px;
-    border-radius:999px;
-    border:1px solid var(--border);
-    background:transparent;
-    color:var(--text-dim);
-    cursor:pointer;
+    flex:0 0 auto; font-family:var(--font-mono); font-size:12.5px; padding:8px 14px;
+    border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer;
   }
-  .tab.active{
-    background:var(--gold);
-    border-color:var(--gold);
-    color:#141821;
-    font-weight:600;
-  }
-  .products{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin-bottom:12px;
-  }
+  .tab.active{background:var(--gold); border-color:var(--gold); color:#141821; font-weight:600;}
+  .products{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;}
   .card{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:14px;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px; display:flex; flex-direction:column; gap:10px;
   }
   .card.product-card{cursor:pointer;}
   .card.product-card:active{transform:scale(0.98);}
   .card .thumb{
-    height:84px;
-    border-radius:10px;
-    background:linear-gradient(135deg, var(--surface-alt), #26313f);
+    height:84px; border-radius:10px; background:linear-gradient(135deg, var(--surface-alt), #26313f);
     display:flex; align-items:center; justify-content:center;
   }
   .card .thumb svg{opacity:.9;}
-  .card h4{
-    font-size:14px; font-weight:600; margin:0; line-height:1.3;
-  }
-  .card .spec{
-    font-family:var(--font-mono);
-    font-size:11px;
-    color:var(--text-dim);
-    margin:0;
-  }
-  .card .row{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-top:auto;
-  }
-  .price{
-    font-family:var(--font-mono);
-    font-weight:600;
-    font-size:15px;
-    color:var(--gold-soft);
-  }
-  .installment-preview{
-    margin:0;
-    min-height:15px;
-    color:var(--cyan);
-    font-family:var(--font-mono);
-    font-size:10.5px;
-    line-height:1.35;
-  }
+  .card h4{font-size:14px; font-weight:600; margin:0; line-height:1.3;}
+  .card .spec{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin:0;}
+  .card .row{display:flex; align-items:center; justify-content:space-between; margin-top:auto;}
+  .price{font-family:var(--font-mono); font-weight:600; font-size:15px; color:var(--gold-soft);}
+  .installment-preview{margin:0; min-height:15px; color:var(--cyan); font-family:var(--font-mono); font-size:10.5px; line-height:1.35;}
   .installment-preview strong{font-weight:600; color:var(--gold-soft);}
-  .stock{
-    display:flex; align-items:flex-end; gap:2px; height:10px;
-  }
+  .stock{display:flex; align-items:flex-end; gap:2px; height:10px;}
   .stock span{width:3px; border-radius:1px; background:var(--border);}
   .stock span.on{background:var(--cyan);}
   .stock span:nth-child(1){height:35%;}
   .stock span:nth-child(2){height:60%;}
   .stock span:nth-child(3){height:85%;}
   .stock span:nth-child(4){height:100%;}
-
-  /* ---- offerte ---- */
   .notify-card{
-    background:linear-gradient(135deg, var(--surface-alt), var(--surface));
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:18px;
-    margin-bottom:18px;
-    display:flex; align-items:center; gap:14px;
+    background:linear-gradient(135deg, var(--surface-alt), var(--surface)); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px; margin-bottom:18px; display:flex; align-items:center; gap:14px;
   }
   .notify-card .txt{flex:1;}
   .notify-card h4{margin:0 0 4px; font-size:14.5px; font-weight:600;}
   .notify-card p{margin:0; font-size:12.5px; color:var(--text-dim); line-height:1.4;}
   .btn{
-    font-family:var(--font-body);
-    font-weight:600;
-    font-size:13px;
-    padding:10px 16px;
-    border-radius:10px;
-    border:none;
-    background:var(--gold);
-    color:#141821;
-    cursor:pointer;
-    white-space:nowrap;
+    font-family:var(--font-body); font-weight:600; font-size:13px; padding:10px 16px;
+    border-radius:10px; border:none; background:var(--gold); color:#141821; cursor:pointer; white-space:nowrap;
   }
   .btn:disabled{background:var(--surface-alt); color:var(--text-dim);}
-  .btn.ghost{
-    background:transparent; border:1px solid var(--border); color:var(--text);
-  }
+  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--text);}
   .offer{
-    display:flex; gap:14px;
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:14px;
-    margin-bottom:12px;
-    align-items:center;
+    display:flex; gap:14px; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px; margin-bottom:12px; align-items:center;
   }
-  .offer .pct{
-    font-family:var(--font-display);
-    font-size:22px;
-    font-weight:700;
-    color:var(--gold);
-    width:56px;
-    text-align:center;
-  }
+  .offer .pct{font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold); width:56px; text-align:center;}
   .offer .body{flex:1;}
   .offer h4{margin:0 0 3px; font-size:14px; font-weight:600;}
   .offer p{margin:0; font-size:12px; color:var(--text-dim);}
   .offer .heat{display:flex; gap:2px; align-items:flex-end; height:10px; margin-top:6px;}
   .offer .heat span{width:3px; border-radius:1px; background:var(--border);}
   .offer .heat span.on{background:var(--gold);}
-
-  /* ---- telefonia & fibra ---- */
-  .plan{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:14px;
-    margin-bottom:12px;
-  }
+  .plan{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px;}
   .plan .row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .plan h4{margin:0 0 3px; font-size:14.5px; font-weight:600;}
   .plan p{margin:0; font-size:12px; color:var(--text-dim); line-height:1.4;}
-  .plan .price{
-    font-family:var(--font-mono);
-    font-weight:600;
-    font-size:14px;
-    color:var(--gold-soft);
-    white-space:nowrap;
-  }
+  .plan .price{font-family:var(--font-mono); font-weight:600; font-size:14px; color:var(--gold-soft); white-space:nowrap;}
   .plan .badge{
-    display:inline-block;
-    font-family:var(--font-mono);
-    font-size:10px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    padding:2px 8px;
-    border-radius:999px;
-    margin-bottom:6px;
+    display:inline-block; font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+    letter-spacing:.05em; padding:2px 8px; border-radius:999px; margin-bottom:6px;
   }
   .plan .badge.mobile{background:rgba(79,216,232,0.15); color:var(--cyan);}
   .plan .badge.fibra{background:rgba(212,175,55,0.15); color:var(--gold);}
   .plan-photo{padding:0; overflow:hidden;}
   .plan-photo img{display:block; width:100%; height:auto; border-radius:var(--radius);}
-
-  /* ---- negozio ---- */
   .info-list{list-style:none; margin:0 0 20px; padding:0; display:flex; flex-direction:column; gap:14px;}
   .info-list li{display:flex; gap:12px; align-items:flex-start;}
   .info-list .ic{
-    width:34px; height:34px; border-radius:9px; background:var(--surface);
-    border:1px solid var(--border);
+    width:34px; height:34px; border-radius:9px; background:var(--surface); border:1px solid var(--border);
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
   .info-list .lbl{font-size:11.5px; color:var(--text-dim); margin:0 0 2px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.06em;}
   .info-list .val{font-size:14px; margin:0; font-weight:500;}
   .info-list a.val{text-decoration:none; color:var(--cyan);}
-
-  .hours{
-    width:100%; border-collapse:collapse; font-size:13px; margin-bottom:24px;
-  }
+  .hours{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:24px;}
   .hours td{padding:7px 0; border-bottom:1px solid var(--border);}
   .hours td:first-child{color:var(--text-dim);}
   .hours td:last-child{text-align:right; font-family:var(--font-mono); font-size:12.5px;}
   .hours tr:last-child td{border-bottom:none;}
-
-  .map-wrap{
-    border-radius:var(--radius);
-    overflow:hidden;
-    border:1px solid var(--border);
-    margin-bottom:16px;
-    filter:grayscale(0.3) contrast(1.05);
-  }
+  .map-wrap{border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); margin-bottom:16px; filter:grayscale(0.3) contrast(1.05);}
   .map-wrap iframe{display:block; width:100%; height:200px; border:0;}
-
   .cta-row{display:flex; gap:10px; margin-bottom:8px;}
   .cta-row .btn{flex:1;}
-
-  footer{
-    padding:36px 24px 24px;
-    text-align:center;
-  }
+  footer{padding:36px 24px 24px; text-align:center;}
   footer .bars{display:flex; justify-content:center; align-items:flex-end; gap:3px; height:18px; margin-bottom:12px;}
   footer .bars span{width:4px; border-radius:2px; background:var(--border);}
   footer .bars span:nth-child(1){height:35%;}
@@ -390,97 +204,65 @@
   footer .bars span:nth-child(3){height:85%; background:var(--gold); opacity:.8;}
   footer .bars span:nth-child(4){height:100%; background:var(--gold);}
   footer p{color:var(--text-dim); font-size:12px; margin:0;}
-
-  /* ---- banner installazione ---- */
   #install-bar{
-    position:fixed; left:16px; right:16px; bottom:16px;
-    background:var(--surface); border:1px solid var(--gold);
-    border-radius:14px; padding:12px 14px;
-    display:none;
-    align-items:center; gap:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.4);
-    z-index:50;
+    position:fixed; left:16px; right:16px; bottom:16px; background:var(--surface); border:1px solid var(--gold);
+    border-radius:14px; padding:12px 14px; display:none; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); z-index:50;
   }
   #install-bar.show{display:flex;}
   #install-bar p{margin:0; font-size:12.5px; flex:1; line-height:1.35;}
   #install-bar strong{display:block; font-size:13.5px; margin-bottom:1px;}
-  #install-bar .close{
-    background:none; border:none; color:var(--text-dim); font-size:18px;
-    cursor:pointer; padding:0 4px; line-height:1;
-  }
+  #install-bar .close{background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer; padding:0 4px; line-height:1;}
   #ios-install-bar{
-    position:fixed; left:16px; right:16px; bottom:16px;
-    background:var(--surface); border:1px solid var(--cyan);
-    border-radius:14px; padding:12px 14px;
-    display:none;
-    align-items:center; gap:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.4);
-    z-index:50;
+    position:fixed; left:16px; right:16px; bottom:16px; background:var(--surface); border:1px solid var(--cyan);
+    border-radius:14px; padding:12px 14px; display:none; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); z-index:50;
   }
   #ios-install-bar.show{display:flex;}
   #ios-install-bar p{margin:0; font-size:12.5px; flex:1; line-height:1.35;}
   #ios-install-bar strong{display:block; font-size:13.5px; margin-bottom:1px;}
   #ios-install-bar .ios-share-icon{color:var(--cyan); font-weight:700;}
-  #ios-install-bar .close{
-    background:none; border:none; color:var(--text-dim); font-size:18px;
-    cursor:pointer; padding:0 4px; line-height:1;
-  }
-
+  #ios-install-bar .close{background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer; padding:0 4px; line-height:1;}
   #lightbox{
-    position:fixed; inset:0; background:rgba(8,10,14,0.94);
-    display:none; align-items:center; justify-content:center;
+    position:fixed; inset:0; background:rgba(8,10,14,0.94); display:none; align-items:center; justify-content:center;
     z-index:200; padding:24px;
   }
   #lightbox.show{display:flex;}
   #lightbox img{max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.5);}
   #lightbox-close{
-    position:fixed; top:18px; right:18px; width:38px; height:38px;
-    border-radius:50%; border:1px solid var(--border); background:var(--surface);
-    color:var(--text); font-size:22px; line-height:1; cursor:pointer; z-index:201;
+    position:fixed; top:18px; right:18px; width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-size:22px; line-height:1; cursor:pointer; z-index:201;
   }
   .zoomable{cursor:zoom-in;}
-
   #product-modal{
-    position:fixed; inset:0; background:rgba(8,10,14,0.7);
-    display:none; align-items:flex-end; justify-content:center;
-    z-index:150;
+    position:fixed; inset:0; background:rgba(8,10,14,0.7); display:none; align-items:flex-end; justify-content:center; z-index:150;
   }
   #product-modal.show{display:flex;}
   .product-modal-card{
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:20px 20px 0 0; padding:24px 20px 28px;
-    width:100%; max-width:480px; max-height:85vh; overflow-y:auto;
-    position:relative;
+    background:var(--surface); border:1px solid var(--border); border-radius:20px 20px 0 0; padding:24px 20px 28px;
+    width:100%; max-width:480px; max-height:85vh; overflow-y:auto; position:relative;
   }
   #product-modal-close{
-    position:absolute; top:14px; right:14px; width:32px; height:32px;
-    border-radius:50%; border:1px solid var(--border); background:var(--surface-alt);
-    color:var(--text); font-size:18px; line-height:1; cursor:pointer;
+    position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--text); font-size:18px; line-height:1; cursor:pointer;
   }
-  .pm-thumb{
-    width:100%; max-width:180px; margin:0 auto 16px; display:block;
-    border-radius:14px; background:var(--surface-alt);
-  }
+  .pm-thumb{width:100%; max-width:180px; margin:0 auto 16px; display:block; border-radius:14px; background:var(--surface-alt);}
   .pm-name{font-family:var(--font-display); font-size:20px; font-weight:600; margin:0 0 4px; text-align:center;}
   .pm-spec{color:var(--text-dim); font-size:13px; text-align:center; margin:0 0 18px;}
   .pm-price-row{
-    display:flex; align-items:baseline; justify-content:center; gap:8px;
-    margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:baseline; justify-content:center; gap:8px; margin-bottom:20px;
+    padding-bottom:18px; border-bottom:1px solid var(--border);
   }
   .pm-price-label{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em;}
   .pm-price-value{font-family:var(--font-mono); font-size:24px; font-weight:600; color:var(--gold-soft);}
-  .pm-rate-title{
-    font-family:var(--font-mono); font-size:11px; color:var(--gold); text-transform:uppercase;
-    letter-spacing:.08em; margin:0 0 12px;
-  }
+  .pm-rate-title{font-family:var(--font-mono); font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.08em; margin:0 0 12px;}
   .pm-rate-option{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:var(--surface-alt); border-radius:10px; padding:12px 14px; margin-bottom:8px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface-alt);
+    border-radius:10px; padding:12px 14px; margin-bottom:8px;
   }
   .pm-rate-option .months{font-size:13px; color:var(--text-dim);}
   .pm-rate-option .amount{font-family:var(--font-mono); font-weight:600; color:var(--cyan); font-size:14px;}
   .pm-no-rate{color:var(--text-dim); font-size:13px; text-align:center; padding:14px 0;}
-
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     .tile{transition:none;}
@@ -505,29 +287,23 @@
   <h2>Il tuo negozio di telefonia, <span class="accent">sempre in tasca.</span></h2>
   <p class="lead">Catalogo aggiornato, offerte in tempo reale e il negozio a un tap di distanza.</p>
 
+  <button class="btn" id="hero-install-btn" style="width:100%; margin-bottom:20px; display:none;">📲 Installa l'app</button>
+
   <nav class="quicktiles">
     <a class="tile" href="#catalogo">
-      <span class="glyph">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#D4AF37" stroke-width="1.6"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="#D4AF37" stroke-width="1.6"/><line x1="10" y1="18.5" x2="14" y2="18.5" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round"/></svg></span>
       <span class="label">Catalogo</span>
     </a>
     <a class="tile" href="#offerte">
-      <span class="glyph">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" stroke="#D4AF37" stroke-width="1.5" stroke-linejoin="round"/></svg>
-      </span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" stroke="#D4AF37" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
       <span class="label">Offerte</span>
     </a>
     <a class="tile" href="#telefonia">
-      <span class="glyph">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 8 7 15 15 15l2-4-5-2-1.5 1.5A11 11 0 0 1 9.5 10L11 8.5 9 3.5 5 4Z" stroke="#D4AF37" stroke-width="1.5" stroke-linejoin="round"/></svg>
-      </span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 8 7 15 15 15l2-4-5-2-1.5 1.5A11 11 0 0 1 9.5 10L11 8.5 9 3.5 5 4Z" stroke="#D4AF37" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
       <span class="label">Telefonia &amp; Fibra</span>
     </a>
     <a class="tile" href="#negozio">
-      <span class="glyph">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#D4AF37" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.2" stroke="#D4AF37" stroke-width="1.6"/></svg>
-      </span>
+      <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="#D4AF37" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.2" stroke="#D4AF37" stroke-width="1.6"/></svg></span>
       <span class="label">Negozio</span>
     </a>
   </nav>
@@ -687,7 +463,6 @@
 </div>
 
 <script>
-  // ---- orologio nella status bar decorativa ----
   function tick(){
     const d = new Date();
     const hh = String(d.getHours()).padStart(2,'0');
@@ -697,10 +472,6 @@
   tick();
   setInterval(tick, 15000);
 
-  // ---- contenuti del negozio (nome, indirizzo, contatti, orari, catalogo):
-  // caricati dal server, modificabili dal pannello admin.html.
-  // Se il server non risponde, restano i valori di esempio gia' scritti
-  // nell'HTML, cosi' la pagina non appare mai vuota. ----
   let CATALOG = {
     smartphone: [
       { name:'iPhone 15', spec:'128GB · Nero', price:'799€', stock:4 },
@@ -728,7 +499,6 @@
     return out;
   }
 
-  // ---- lightbox: clic su una foto/PDF per vederlo a schermo intero ----
   function openLightbox(src){
     document.getElementById('lightbox-img').src = src;
     document.getElementById('lightbox').classList.add('show');
@@ -741,8 +511,6 @@
   document.getElementById('lightbox').addEventListener('click', (e) => {
     if (e.target.id === 'lightbox') closeLightbox();
   });
-  // Delega: qualunque immagine con classe "zoomable", ovunque sia (catalogo,
-  // gestori, rate), apre il lightbox al tocco/click.
   document.addEventListener('click', (e) => {
     const img = e.target.closest('img.zoomable');
     if (img) openLightbox(img.currentSrc || img.src);
@@ -795,7 +563,6 @@
     renderCatalog(activeTab ? activeTab.dataset.cat : 'smartphone');
   });
 
-  // ---- popup prodotto: prezzo totale + rateizzazione, al tap su uno smartphone ----
   function openProductModal(p){
     const hasRates = Array.isArray(p.installments) && p.installments.length > 0;
     const body = document.getElementById('product-modal-body');
@@ -830,14 +597,13 @@
     if (e.target.id === 'product-modal') closeProductModal();
   });
   document.getElementById('products').addEventListener('click', (e) => {
-    if (e.target.closest('img.zoomable')) return; // il tap sulla foto apre lo zoom, non il popup
+    if (e.target.closest('img.zoomable')) return;
     const card = e.target.closest('.product-card');
     if (!card) return;
     const p = CATALOG[card.dataset.cat][Number(card.dataset.index)];
     if (p) openProductModal(p);
   });
 
-  // ---- telefonia & fibra: piani per gestore ----
   let CARRIERS = {
     tim: [{ name: 'Tim Power Iron', type: 'mobile', price: '9,99€/mese', details: '150GB, minuti e SMS illimitati' }],
     wind: [{ name: 'WindTre Go Unlimited', type: 'mobile', price: '11,99€/mese', details: 'Giga illimitati, minuti illimitati' }],
@@ -959,10 +725,6 @@
 
   fetch('/api/config').then(r => r.ok ? r.json() : Promise.reject()).then(applyShopConfig).catch(() => {});
 
-
-  // ---- offerte: caricate dal server (server/data/offers.json).
-  // Se il server non risponde (es. app aperta come semplice file statico),
-  // mostriamo comunque un set di esempio cosi' la sezione non resta vuota. ----
   const FALLBACK_OFFERS = [
     { pct:'-15%', title:'Cover e vetri protettivi', desc:'Su tutta la selezione accessori, fino a fine mese.', heat:3 },
     { pct:'−80€', title:'Permuta il tuo usato', desc:'Valutazione gratuita, sconto immediato sul nuovo acquisto.', heat:2 },
@@ -990,10 +752,6 @@
     .then(renderOffers)
     .catch(() => renderOffers(FALLBACK_OFFERS));
 
-  // ---- notifiche push in tempo reale ----
-  // Il permesso lo chiede il browser, ma l'iscrizione vera e propria viene
-  // registrata sul server: e' li' che sapremo a chi mandare le notifiche
-  // quando aggiungerai una nuova offerta.
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -1004,7 +762,6 @@
   const notifyBtn = document.getElementById('notify-btn');
 
   function setNotifyState(state){
-    // state: 'idle' | 'active' | 'blocked' | 'unsupported' | 'error'
     if (state === 'unsupported'){ notifyBtn.textContent='Non supportato'; notifyBtn.disabled=true; }
     else if (state === 'active'){ notifyBtn.textContent='Attive ✓'; notifyBtn.disabled=true; }
     else if (state === 'blocked'){ notifyBtn.textContent='Bloccate'; notifyBtn.disabled=true; }
@@ -1021,10 +778,6 @@
       const reg = await navigator.serviceWorker.ready;
       let existing = await reg.pushManager.getSubscription();
       if (existing) {
-        // Controlliamo che la chiave di sicurezza con cui e' stata creata
-        // l'iscrizione corrisponda ancora a quella attuale del server. Se il
-        // server ha generato nuove chiavi nel frattempo, l'iscrizione vecchia
-        // non funzionerebbe piu': la rifacciamo da zero, in automatico.
         try {
           const { publicKey } = await fetch('/api/vapid-public-key').then(r => r.json());
           const currentKey = urlBase64ToUint8Array(publicKey);
@@ -1036,17 +789,14 @@
             await existing.unsubscribe();
             existing = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: currentKey });
           }
-        } catch (e) { /* se il controllo fallisce, si prova comunque a registrare quella esistente */ }
-
-        // Ri-registriamo comunque sul server ad ogni apertura, in silenzio,
-        // cosi' un eventuale disallineamento lato server si corregge da solo.
+        } catch (e) {}
         try {
           await fetch('/api/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(existing)
           });
-        } catch (e) { /* nessun problema, si ritentera' alla prossima apertura */ }
+        } catch (e) {}
         setNotifyState('active');
         return;
       }
@@ -1084,39 +834,64 @@
 
   initNotifyButton();
 
-  // ---- service worker ----
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(console.error);
     });
   }
 
-  // ---- prompt di installazione personalizzato ----
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const iosBar = document.getElementById('ios-install-bar');
+  const heroInstallBtn = document.getElementById('hero-install-btn');
+
   let deferredPrompt;
   const installBar = document.getElementById('install-bar');
+
+  // Il pulsante nella hero resta sempre visibile (a meno che l'app non sia
+  // gia' installata): al tocco fa la cosa giusta in base al dispositivo,
+  // senza bisogno di aspettare che compaia il banner in basso.
+  if (!isStandalone) {
+    heroInstallBtn.style.display = 'block';
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     installBar.classList.add('show');
   });
-  document.getElementById('install-btn').addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    installBar.classList.remove('show');
-  });
+
+  async function triggerInstall(){
+    if (deferredPrompt) {
+      // Android/Chrome/Desktop: il browser sa gia' come installare l'app,
+      // basta mostrare il prompt nativo.
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBar.classList.remove('show');
+      heroInstallBtn.style.display = 'none';
+    } else if (isIOS) {
+      // iPhone/iPad: Apple non permette di avviare l'installazione da codice,
+      // mostriamo le istruzioni per farlo a mano con Condividi.
+      iosBar.classList.add('show');
+      iosBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // Browser che non supporta l'installazione automatica (es. non ancora
+      // pronto, o non compatibile): istruzioni generiche di riserva.
+      alert('Per installare l\'app: apri il menu del browser (di solito in alto a destra) e cerca la voce "Aggiungi a schermata Home" o "Installa app".');
+    }
+  }
+  heroInstallBtn.addEventListener('click', triggerInstall);
+  document.getElementById('install-btn').addEventListener('click', triggerInstall);
+
   document.getElementById('install-close').addEventListener('click', () => {
     installBar.classList.remove('show');
   });
   window.addEventListener('appinstalled', () => {
     installBar.classList.remove('show');
+    heroInstallBtn.style.display = 'none';
   });
 
-  // ---- iPhone/iPad: niente prompt automatico, mostriamo istruzioni manuali ----
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const iosBar = document.getElementById('ios-install-bar');
   if (isIOS && !isStandalone) {
     iosBar.classList.add('show');
   }
