@@ -212,6 +212,15 @@ async function addNews(config, item) {
     target: ["catalogo", "telefonia", "offerte"].includes(item.target) ? item.target : "offerte",
     createdAt: Date.now(),
   };
+  // Riferimento opzionale per portare il cliente direttamente al prodotto o
+  // al gestore specifico, invece che alla sola sezione generica.
+  if (item.category && item.name) {
+    entry.category = String(item.category);
+    entry.name = String(item.name);
+  }
+  if (item.carrier) {
+    entry.carrier = String(item.carrier);
+  }
   const updated = { ...config, news: [entry, ...(Array.isArray(config.news) ? config.news : [])].slice(0, 3) };
   await saveConfig(updated);
   return updated;
@@ -314,7 +323,7 @@ async function main() {
   app.put("/api/admin/config", requireAdmin, async (req, res) => {
     console.log("DEBUG: ricevuto PUT /api/admin/config, campi:", Object.keys(req.body || {}));
     const current = (await getConfig()) || DEFAULT_CONFIG;
-    const { notify, news, ...body } = req.body || {};
+    const { notify, news, newsList, ...body } = req.body || {};
     let updated = { ...current, ...body };
     if (body.phone !== undefined) {
       updated.phone = body.phone;
@@ -324,8 +333,19 @@ async function main() {
       updated.whatsapp = body.whatsapp;
       updated.whatsappLink = `https://wa.me/${normalizePhone(body.whatsapp).replace("+", "")}`;
     }
-    if (news && news.title) updated = await addNews(updated, news);
-    else await saveConfig(updated);
+    if (Array.isArray(newsList) && newsList.length) {
+      // Piu' novita' in una sola pubblicazione (es. piu' prodotti aggiornati
+      // insieme): ne creiamo una per ciascuna, cosi' ogni "Vedi" porta al
+      // prodotto o gestore giusto invece che alla sezione generica.
+      for (const item of newsList.slice(-3)) {
+        if (item && item.title) updated = await addNews(updated, item);
+      }
+      await saveConfig(updated);
+    } else if (news && news.title) {
+      updated = await addNews(updated, news);
+    } else {
+      await saveConfig(updated);
+    }
     if (notify && notify.body) {
       console.log("Modifica pubblicata dal pannello, invio notifica:", notify.body);
       await sendToAll({ title: notify.title || `${updated.shopName} · Novità`, body: notify.body });
