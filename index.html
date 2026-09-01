@@ -737,11 +737,47 @@
     list.innerHTML = news.map(item => {
       const target = ['catalogo', 'telefonia', 'offerte'].includes(item.target) ? item.target : 'offerte';
       const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+      const extraAttrs = [
+        item.category ? `data-news-category="${escapeHtml(item.category)}"` : '',
+        item.name ? `data-news-name="${escapeHtml(item.name)}"` : '',
+        item.carrier ? `data-news-carrier="${escapeHtml(item.carrier)}"` : '',
+      ].filter(Boolean).join(' ');
       return `<article class="news-card" data-news-id="${item.createdAt}">
         <div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.description)}</p><time>${date}</time></div>
-        <button class="btn news-open" type="button" data-news-target="${target}" data-news-id="${item.createdAt}">Vedi</button>
+        <button class="btn news-open" type="button" data-news-target="${target}" data-news-id="${item.createdAt}" ${extraAttrs}>Vedi</button>
       </article>`;
     }).join('');
+  }
+
+  // Porta il cliente esattamente al prodotto (categoria giusta + scheda
+  // aperta) o al gestore giusto, invece di lasciarlo solo nella sezione
+  // generica.
+  function openNewsTarget(button){
+    const target = button.dataset.newsTarget;
+    const category = button.dataset.newsCategory;
+    const name = button.dataset.newsName;
+    const carrier = button.dataset.newsCarrier;
+
+    if (target === 'catalogo' && category) {
+      const tabBtn = document.querySelector(`#tabs .tab[data-cat="${category}"]`);
+      if (tabBtn) {
+        document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
+        tabBtn.classList.add('active');
+        renderCatalog(category);
+        if (name) {
+          const product = (CATALOG[category] || []).find(p => p.name === name);
+          if (product) setTimeout(() => openProductModal(product), 300);
+        }
+      }
+    } else if (target === 'telefonia' && carrier) {
+      const tabBtn = document.querySelector(`#carrier-tabs .tab[data-carrier="${carrier}"]`);
+      if (tabBtn) {
+        document.querySelectorAll('#carrier-tabs .tab').forEach(t => t.classList.remove('active'));
+        tabBtn.classList.add('active');
+        renderCarrierPlans(carrier);
+      }
+    }
+    location.hash = target;
   }
 
   document.getElementById('news-list').addEventListener('click', (e) => {
@@ -754,7 +790,7 @@
     if (!document.querySelector('#news-list .news-card')) {
       document.getElementById('novita').hidden = true;
     }
-    location.hash = button.dataset.newsTarget;
+    openNewsTarget(button);
   });
 
   fetch('/api/config').then(r => r.ok ? r.json() : Promise.reject()).then(applyShopConfig).catch(() => {});

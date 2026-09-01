@@ -414,8 +414,8 @@
   let stockValue = 2;
   let catalogDirty = false;
   let carriersDirty = false;
-  let catalogChanges = [];
-  let carrierChanges = [];
+  let catalogChanges = []; // { name, category, action }
+  let carrierChanges = []; // { name, carrier, action }
 
   function toast(msg, isError){
     const t = document.getElementById('toast');
@@ -900,7 +900,7 @@
   document.getElementById('confirm-catalog-import').addEventListener('click', () => {
     if (!confirm(`Sostituire il catalogo smartphone con ${catalogImportProducts.length} prodotti importati?`)) return;
     config.products.smartphone = catalogImportProducts;
-    catalogChanges.push(`${catalogImportProducts.length} smartphone importati`);
+    catalogChanges.push({ category: 'smartphone', name: null, action: 'imported', count: catalogImportProducts.length });
     document.getElementById('catalog-import-card').style.display = 'none';
     currentCat = 'smartphone';
     document.querySelectorAll('#cat-tabs .cat-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.cat === 'smartphone'));
@@ -1112,6 +1112,36 @@
     const button = document.getElementById('publish-catalog-btn');
     button.disabled = true;
     try {
+      const recentChanges = catalogChanges.slice(-3);
+      const catLabel = { smartphone: 'smartphone', accessori: 'accessorio', ricambi: 'ricambio' };
+      const newsList = recentChanges.length
+        ? recentChanges.map(c => {
+            if (c.action === 'imported') {
+              return {
+                title: `${c.count} smartphone importati`,
+                description: 'Catalogo Smartphone aggiornato dal listino.',
+                target: 'catalogo',
+                category: c.category,
+              };
+            }
+            let title;
+            if (c.action === 'removed') title = `${c.name} non è più disponibile`;
+            else if (c.action === 'updated') title = `${c.name} aggiornato`;
+            else title = c.category === 'smartphone' ? `C'è un nuovo smartphone per te` : `Nuovo ${catLabel[c.category] || 'prodotto'}: ${c.name}`;
+            return {
+              title,
+              description: c.name,
+              target: 'catalogo',
+              category: c.category,
+              // Non colleghiamo direttamente al prodotto se e' stato rimosso: non esiste piu'.
+              name: c.action === 'removed' ? undefined : c.name,
+            };
+          })
+        : [{
+            title: 'Catalogo aggiornato',
+            description: 'Prodotti, prezzi o disponibilità aggiornati.',
+            target: 'catalogo',
+          }];
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
         body: JSON.stringify({
@@ -1120,11 +1150,7 @@
             title: `${config.shopName || 'Fvc Project'} · Catalogo aggiornato`,
             body: 'Ci sono novità nel catalogo: prodotti, prezzi o disponibilità aggiornati.'
           },
-          news: {
-            title: 'Catalogo aggiornato',
-            description: catalogChanges.slice(-3).join(' · ') || 'Prodotti, prezzi o disponibilità aggiornati.',
-            target: 'catalogo'
-          }
+          newsList
         })
       });
       setCatalogDirty(false);
@@ -1146,7 +1172,7 @@
     if (!confirm('Eliminare questo prodotto?')) return;
     const removedName = config.products[currentCat][i]?.name || 'Prodotto';
     config.products[currentCat].splice(i, 1);
-    catalogChanges.push(`${removedName} rimosso`);
+    catalogChanges.push({ category: currentCat, name: removedName, action: 'removed' });
     renderProducts();
     setCatalogDirty(true);
     toast('Modifica pronta. Pubblica il catalogo quando hai finito.');
@@ -1163,10 +1189,10 @@
     if (!config.products[currentCat]) config.products[currentCat] = [];
     if (idx >= 0) {
       config.products[currentCat][idx] = product;
-      catalogChanges.push(`${name} aggiornato`);
+      catalogChanges.push({ category: currentCat, name, action: 'updated' });
     } else {
       config.products[currentCat].push(product);
-      catalogChanges.push(`${name} aggiunto`);
+      catalogChanges.push({ category: currentCat, name, action: 'added' });
     }
     document.getElementById('product-form-card').style.display = 'none';
     renderProducts();
@@ -1275,6 +1301,27 @@
     const button = document.getElementById('publish-carriers-btn');
     button.disabled = true;
     try {
+      const carrierLabel = { tim: 'TIM', wind: 'WindTre', sky: 'Sky', lyca: 'Lycamobile', very: 'VeryMobile', kena: 'Kena' };
+      const recentChanges = carrierChanges.slice(-3);
+      const newsList = recentChanges.length
+        ? recentChanges.map(c => {
+            const label = carrierLabel[c.carrier] || c.carrier.toUpperCase();
+            let title;
+            if (c.action === 'removed') title = `Offerta ${label} non più disponibile`;
+            else if (c.action === 'updated') title = `Offerta ${label} aggiornata`;
+            else title = `Nuova offerta ${label} per te`;
+            return {
+              title,
+              description: c.name,
+              target: 'telefonia',
+              carrier: c.carrier,
+            };
+          })
+        : [{
+            title: 'Offerte telefonia e fibra aggiornate',
+            description: 'Nuove offerte mobile e fibra disponibili.',
+            target: 'telefonia',
+          }];
       config = await apiFetch('/api/admin/config', {
         method: 'PUT',
         body: JSON.stringify({
@@ -1283,11 +1330,7 @@
             title: `${config.shopName || 'Fvc Project'} · Offerte aggiornate`,
             body: 'Abbiamo aggiornato le offerte di telefonia e fibra. Tocca per scoprirle.'
           },
-          news: {
-            title: 'Offerte telefonia e fibra aggiornate',
-            description: carrierChanges.slice(-3).join(' · ') || 'Nuove offerte mobile e fibra disponibili.',
-            target: 'telefonia'
-          }
+          newsList
         })
       });
       setCarriersDirty(false);
@@ -1309,7 +1352,7 @@
     if (!confirm('Eliminare questo piano?')) return;
     const removedName = config.carriers[currentCarrier][i]?.name || 'Offerta';
     config.carriers[currentCarrier].splice(i, 1);
-    carrierChanges.push(`${removedName} rimossa`);
+    carrierChanges.push({ carrier: currentCarrier, name: removedName, action: 'removed' });
     renderCarrierPlansList();
     setCarriersDirty(true);
     toast('Modifica pronta. Pubblica i gestori quando hai finito.');
@@ -1335,10 +1378,10 @@
     if (!config.carriers[currentCarrier]) config.carriers[currentCarrier] = [];
     if (idx >= 0) {
       config.carriers[currentCarrier][idx] = plan;
-      carrierChanges.push(`${name || 'Offerta'} aggiornata`);
+      carrierChanges.push({ carrier: currentCarrier, name: name || 'Offerta', action: 'updated' });
     } else {
       config.carriers[currentCarrier].push(plan);
-      carrierChanges.push(`${name || 'Nuova offerta'} aggiunta`);
+      carrierChanges.push({ carrier: currentCarrier, name: name || 'Nuova offerta', action: 'added' });
     }
     document.getElementById('plan-form-card').style.display = 'none';
     renderCarrierPlansList();
