@@ -175,6 +175,8 @@
   .offer .heat span{width:3px; border-radius:1px; background:var(--border);}
   .offer .heat span.on{background:var(--gold);}
   .plan{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px;}
+  .plan.plan-card{cursor:pointer;}
+  .plan.plan-card:active{transform:scale(0.98);}
   .plan .row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .plan h4{margin:0 0 3px; font-size:14.5px; font-weight:600;}
   .plan p{margin:0; font-size:12px; color:var(--text-dim); line-height:1.4;}
@@ -629,7 +631,7 @@
       wrap.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Nessun piano disponibile al momento per questo gestore.</p>';
       return;
     }
-    wrap.innerHTML = plans.map(p => {
+    wrap.innerHTML = plans.map((p, i) => {
       if (p.isPhoto) {
         return `
           <div class="plan plan-photo">
@@ -638,7 +640,7 @@
         `;
       }
       return `
-      <div class="plan">
+      <div class="plan plan-card" data-carrier="${carrier}" data-index="${i}">
         <span class="badge ${p.type === 'fibra' ? 'fibra' : 'mobile'}">${p.type === 'fibra' ? 'Fibra' : 'Mobile'}</span>
         <div class="row">
           ${p.image ? `<img class="zoomable" src="${p.image}" alt="${p.name}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
@@ -660,6 +662,29 @@
     document.querySelectorAll('#carrier-tabs .tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     renderCarrierPlans(btn.dataset.carrier);
+  });
+
+  // ---- popup piano gestore: stesso stile del popup prodotto ----
+  function openPlanModal(p){
+    const body = document.getElementById('product-modal-body');
+    body.innerHTML = `
+      ${p.image ? `<img class="pm-thumb" src="${p.image}" alt="${p.name}">` : ''}
+      <span class="badge ${p.type === 'fibra' ? 'fibra' : 'mobile'}" style="display:block; width:fit-content; margin:0 auto 10px;">${p.type === 'fibra' ? 'Fibra' : 'Mobile'}</span>
+      <p class="pm-name">${p.name}</p>
+      <p class="pm-spec">${p.details || ''}</p>
+      <div class="pm-price-row">
+        <span class="pm-price-label">Prezzo</span>
+        <span class="pm-price-value">${p.price}</span>
+      </div>
+    `;
+    document.getElementById('product-modal').classList.add('show');
+  }
+  document.getElementById('carrier-plans').addEventListener('click', (e) => {
+    if (e.target.closest('img.zoomable')) return;
+    const card = e.target.closest('.plan-card');
+    if (!card) return;
+    const plan = (CARRIERS[card.dataset.carrier] || [])[Number(card.dataset.index)];
+    if (plan) openPlanModal(plan);
   });
 
   function applyShopConfig(cfg){
@@ -775,6 +800,10 @@
         document.querySelectorAll('#carrier-tabs .tab').forEach(t => t.classList.remove('active'));
         tabBtn.classList.add('active');
         renderCarrierPlans(carrier);
+        if (name) {
+          const plan = (CARRIERS[carrier] || []).find(p => p.name === name);
+          if (plan && !plan.isPhoto) setTimeout(() => openPlanModal(plan), 300);
+        }
       }
     }
     location.hash = target;

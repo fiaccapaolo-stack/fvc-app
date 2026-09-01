@@ -1315,6 +1315,8 @@
               description: c.name,
               target: 'telefonia',
               carrier: c.carrier,
+              // Non colleghiamo direttamente al piano se e' stato rimosso: non esiste piu'.
+              name: c.action === 'removed' ? undefined : c.name,
             };
           })
         : [{
