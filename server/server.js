@@ -213,13 +213,15 @@ async function addNews(config, item) {
     createdAt: Date.now(),
   };
   // Riferimento opzionale per portare il cliente direttamente al prodotto o
-  // al gestore specifico, invece che alla sola sezione generica.
-  if (item.category && item.name) {
+  // al piano del gestore specifico, invece che alla sola sezione generica.
+  if (item.category) {
     entry.category = String(item.category);
-    entry.name = String(item.name);
   }
   if (item.carrier) {
     entry.carrier = String(item.carrier);
+  }
+  if (item.name && (item.category || item.carrier)) {
+    entry.name = String(item.name);
   }
   const updated = { ...config, news: [entry, ...(Array.isArray(config.news) ? config.news : [])].slice(0, 3) };
   await saveConfig(updated);
