@@ -77,6 +77,12 @@
   .wordmark .bars span:nth-child(3){height:85%;}
   .wordmark .bars span:nth-child(4){height:100%;}
   .wordmark h1{font-family:var(--font-display); font-size:22px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  .wordmark h1 .brand-accent{
+    font-size:1.35em;
+    color:var(--gold);
+    font-weight:800;
+    text-shadow:0 0 16px rgba(240,196,61,.35);
+  }
   .hero h2{font-family:var(--font-display); font-size:34px; line-height:1.15; font-weight:600; margin:0 0 10px; max-width:20ch;}
   .hero h2 .accent{color:var(--gold); text-shadow:0 0 20px rgba(240,196,61,.3);}
   .hero p.lead{color:var(--text-dim); font-size:15px; max-width:40ch; margin:0 0 26px;}
@@ -293,7 +299,7 @@
 <header class="hero">
   <div class="wordmark">
     <span class="bars"><span></span><span></span><span></span><span></span></span>
-    <h1 id="shop-name">Fvc Project Srl</h1>
+    <h1 id="shop-name"><span class="brand-accent">Fvc</span> Project Srl</h1>
   </div>
   <h2>Il tuo negozio di telefonia, <span class="accent">sempre in tasca.</span></h2>
   <p class="lead">Catalogo aggiornato, offerte in tempo reale e il negozio a un tap di distanza.</p>
@@ -691,7 +697,15 @@
     if (!cfg) return;
     document.title = `${cfg.shopName} — Telefonia`;
     const setText = (id, val) => { const el = document.getElementById(id); if (el && val) el.textContent = val; };
-    setText('shop-name', cfg.shopName);
+    const nameEl = document.getElementById('shop-name');
+    if (nameEl && cfg.shopName) {
+      const match = cfg.shopName.match(/^(Fvc)(\s+.*)?$/i);
+      if (match) {
+        nameEl.innerHTML = `<span class="brand-accent">${match[1]}</span>${match[2] || ''}`;
+      } else {
+        nameEl.textContent = cfg.shopName;
+      }
+    }
     setText('install-bar-name', `Aggiungi ${cfg.shopName} alla Home`);
     setText('ios-install-bar-name', `Aggiungi ${cfg.shopName} alla Home`);
     setText('shop-address', cfg.address);
